@@ -218,6 +218,14 @@ const selectedShape = computed(
     ) ?? null,
 )
 
+// 五刀沒有展開圖也不是盤形，圖面區只有一張圖；
+// 這時還維持兩欄的話圖會被擠在左半邊，所以改成單欄整寬
+const hasSecondFigure = computed(
+  () =>
+    Boolean(selectedGroup.value?.developedImage) ||
+    selectedGroup.value?.id === 'tray',
+)
+
 // 步驟只有在前一步選完後才可點，避免跳過必填
 const isStepReachable = (step: Step) =>
   step === 'cut' ||
@@ -506,7 +514,10 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
           :title="`${selectedGroup.title} ${selectedShape.title}：圖面`"
           description="左為彎折後外形，右為展開圖，圖上字母即為下方要填的尺寸代號。"
         >
-          <div class="grid gap-4 md:grid-cols-2">
+          <div
+            class="grid gap-4"
+            :class="hasSecondFigure ? 'md:grid-cols-2' : ''"
+          >
             <figure
               class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6"
             >
