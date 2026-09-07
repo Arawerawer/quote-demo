@@ -667,7 +667,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                 v-model="note"
                 :rows="3"
                 :maxlength="200"
-                placeholder="有其他需求或說明可以寫在這裡，例如材質、表面處理、交期。"
+                placeholder="有其他需求或說明可以寫在這裡。"
               />
               <span class="text-nurse-500 text-xs">
                 {{ note.length }} / 200
