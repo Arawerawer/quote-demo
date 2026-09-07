@@ -2,7 +2,7 @@ export interface QuoteCartItem {
   id: number
   /** 品項，如「鋼板彎折」 */
   category: string
-  /** 選擇摘要，如「四刀 第 1 款」 */
+  /** 選擇摘要，如「四刀 第 1 種」 */
   summary: string
   /** 尺寸摘要，如「A 10cm、B 20cm」 */
   detail: string

@@ -3,7 +3,7 @@ import { ChevronRight } from '@lucide/vue'
 
 // 資料完全依照 Notion「順裕鐵材 / 鋼板彎折形狀」整理：
 // 每個刀數群組沿用 Notion 原圖，參數代號（A、B、C…）與圖上標示一致。
-// Notion 原圖沒有替形狀命名，因此這裡只用「第 N 款」對應圖面由左至右的順序，不自行取名。
+// Notion 原圖沒有替形狀命名，因此這裡只用「第 N 種」對應圖面由左至右的順序，不自行取名。
 interface BendShape {
   id: string
   title: string
@@ -35,7 +35,7 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'c1-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/cut-1/shape-1.png`,
         segments: ['A', 'B'],
         developed: 'C',
@@ -50,14 +50,14 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'c2-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/cut-2/shape-1.png`,
         segments: ['A', 'B', 'C'],
         developed: 'D',
       },
       {
         id: 'c2-s2',
-        title: '第 2 款',
+        title: '第 2 種',
         image: `${IMG}/cut-2/shape-2.png`,
         segments: ['A', 'B', 'C'],
         developed: 'D',
@@ -72,14 +72,14 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'c3-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/cut-3/shape-1.png`,
         segments: ['A', 'B', 'C', 'D'],
         developed: 'E',
       },
       {
         id: 'c3-s2',
-        title: '第 2 款',
+        title: '第 2 種',
         image: `${IMG}/cut-3/shape-2.png`,
         segments: ['A', 'B', 'C', 'D'],
         developed: 'E',
@@ -94,28 +94,28 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'c4-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/cut-4/shape-1.png`,
         segments: ['A', 'B', 'C', 'D', 'E'],
         developed: 'F',
       },
       {
         id: 'c4-s2',
-        title: '第 2 款',
+        title: '第 2 種',
         image: `${IMG}/cut-4/shape-2.png`,
         segments: ['A', 'B', 'C', 'D', 'E'],
         developed: 'F',
       },
       {
         id: 'c4-s3',
-        title: '第 3 款',
+        title: '第 3 種',
         image: `${IMG}/cut-4/shape-3.png`,
         segments: ['A', 'B', 'C', 'D', 'E'],
         developed: 'F',
       },
       {
         id: 'c4-s4',
-        title: '第 4 款',
+        title: '第 4 種',
         image: `${IMG}/cut-4/shape-4.png`,
         segments: ['A', 'B', 'C', 'D', 'E'],
         developed: 'F',
@@ -129,31 +129,31 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'c5-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/cut-5/shape-1.png`,
         segments: ['A', 'B', 'C', 'D', 'E', 'F'],
       },
       {
         id: 'c5-s2',
-        title: '第 2 款',
+        title: '第 2 種',
         image: `${IMG}/cut-5/shape-2.png`,
         segments: ['A', 'B', 'C', 'D', 'E', 'F'],
       },
       {
         id: 'c5-s3',
-        title: '第 3 款',
+        title: '第 3 種',
         image: `${IMG}/cut-5/shape-3.png`,
         segments: ['A', 'B', 'C', 'D', 'E', 'F'],
       },
       {
         id: 'c5-s4',
-        title: '第 4 款',
+        title: '第 4 種',
         image: `${IMG}/cut-5/shape-4.png`,
         segments: ['A', 'B', 'C', 'D', 'E', 'F'],
       },
       {
         id: 'c5-s5',
-        title: '第 5 款',
+        title: '第 5 種',
         image: `${IMG}/cut-5/shape-5.png`,
         segments: ['A', 'B', 'C', 'D', 'E', 'F'],
       },
@@ -166,25 +166,25 @@ const bendGroups: BendGroup[] = [
     shapes: [
       {
         id: 'tray-s1',
-        title: '第 1 款',
+        title: '第 1 種',
         image: `${IMG}/tray/shape-1.png`,
         segments: ['A', 'B', 'C'],
       },
       {
         id: 'tray-s2',
-        title: '第 2 款',
+        title: '第 2 種',
         image: `${IMG}/tray/shape-2.png`,
         segments: ['A', 'B', 'C', 'D'],
       },
       {
         id: 'tray-s3',
-        title: '第 3 款',
+        title: '第 3 種',
         image: `${IMG}/tray/shape-3.png`,
         segments: ['A', 'B', 'C', 'D'],
       },
       {
         id: 'tray-s4',
-        title: '第 4 款',
+        title: '第 4 種',
         image: `${IMG}/tray/shape-4.png`,
         segments: ['A', 'B', 'C', 'D'],
       },
@@ -323,7 +323,7 @@ const addToCart = () => {
     detail,
   })
 
-  // 清掉這一款已填的尺寸，回到第一步方便接著填下一筆
+  // 清掉這一種已填的尺寸，回到第一步方便接著填下一筆
   for (const segment of activeSegments.value) {
     delete segmentValues.value[segmentKey(shape.id, segment)]
   }
