@@ -15,6 +15,7 @@ const {
   nameError,
   phoneError,
   emailError,
+  taxIdError,
   isContactValid,
 } = useQuoteContact()
 
@@ -196,18 +197,6 @@ const removeConfirmed = () => {
         </p>
       </UIPageContent>
 
-      <!-- 相關選購項目 -->
-      <UIPageContent class="flex flex-col gap-4">
-        <div>
-          <h2 class="text-brand-900 m-0 text-xl font-bold">相關選購項目</h2>
-          <p class="text-nurse-600 m-0 mt-1 text-sm">
-            還需要其他鋼材嗎？點選即可繼續加入詢價。
-          </p>
-        </div>
-
-        <ProductRelatedList />
-      </UIPageContent>
-
       <!-- 交期與聯絡資訊 -->
       <UIPageContent class="flex flex-col gap-4">
         <div>
@@ -219,27 +208,12 @@ const removeConfirmed = () => {
 
         <UIGrid>
           <UIGridItem sm="12" md="6">
-            <UIFormGroup label="希望交期">
-              <UIFormDate v-model="contact.deliveryDate" :min="todayIso" />
-            </UIFormGroup>
-          </UIGridItem>
-
-          <UIGridItem sm="12" md="6">
             <UIFormGroup
               label="聯絡人姓名"
               star
               :warning-text="showErrors ? nameError : ''"
             >
               <UIFormInput v-model="contact.name" placeholder="請輸入姓名" />
-            </UIFormGroup>
-          </UIGridItem>
-
-          <UIGridItem sm="12" md="6">
-            <UIFormGroup label="公司名稱">
-              <UIFormInput
-                v-model="contact.company"
-                placeholder="個人詢價可不填"
-              />
             </UIFormGroup>
           </UIGridItem>
 
@@ -258,6 +232,29 @@ const removeConfirmed = () => {
           </UIGridItem>
 
           <UIGridItem sm="12" md="6">
+            <UIFormGroup label="公司名稱">
+              <UIFormInput
+                v-model="contact.company"
+                placeholder="個人詢價可不填"
+              />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup
+              label="公司統編"
+              :warning-text="showErrors ? taxIdError : ''"
+            >
+              <UIFormInput
+                v-model="contact.taxId"
+                inputmode="numeric"
+                maxlength="8"
+                placeholder="個人詢價可不填"
+              />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
             <UIFormGroup
               label="電子郵件 (Email)"
               :warning-text="showErrors ? emailError : ''"
@@ -267,6 +264,12 @@ const removeConfirmed = () => {
                 type="email"
                 placeholder="example@company.com"
               />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup label="希望交期">
+              <UIFormDate v-model="contact.deliveryDate" :min="todayIso" />
             </UIFormGroup>
           </UIGridItem>
         </UIGrid>
@@ -375,7 +378,7 @@ const removeConfirmed = () => {
     <UIAlert
       v-model="isContactAlertOpen"
       title="請補齊聯絡資訊"
-      text="聯絡人姓名與聯絡電話為必填，我們才能回覆報價。"
+      text="聯絡人姓名與聯絡電話為必填，我們才能回覆報價。若有填公司統編與 Email，請確認格式正確。"
       icon="warning"
       confirm-text="知道了"
     />

@@ -3,6 +3,8 @@ export interface QuoteContact {
   deliveryDate: string
   name: string
   company: string
+  /** 公司統編，8 位數字；個人詢價可不填 */
+  taxId: string
   phone: string
   email: string
   /** 送貨縣市；空字串代表未選 */
@@ -57,6 +59,7 @@ export const useQuoteContact = () => {
     deliveryDate: '',
     name: '',
     company: '',
+    taxId: '',
     phone: '',
     email: '',
     shippingCity: '',
@@ -111,8 +114,24 @@ export const useQuoteContact = () => {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value) ? '' : 'Email 格式不正確'
   })
 
+  // 統編選填，但填了就要是 8 位數字。刻意不做官方的檢查碼演算法——
+  // 比照電話的寬鬆做法，擋掉打錯位數就好，不要擋到真客戶。
+  const taxIdError = computed(() => {
+    const value = contact.value.taxId.trim()
+
+    if (!value) {
+      return ''
+    }
+
+    return /^\d{8}$/.test(value) ? '' : '統編應為 8 位數字'
+  })
+
   const isContactValid = computed(
-    () => !nameError.value && !phoneError.value && !emailError.value,
+    () =>
+      !nameError.value &&
+      !phoneError.value &&
+      !emailError.value &&
+      !taxIdError.value,
   )
 
   /** 送貨地點的顯示字串；沒填時是空字串 */
@@ -127,6 +146,7 @@ export const useQuoteContact = () => {
     nameError,
     phoneError,
     emailError,
+    taxIdError,
     isContactValid,
     shippingText,
   }
