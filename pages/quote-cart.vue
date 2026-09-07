@@ -8,6 +8,21 @@ const {
   exportCsv: exportCartCsv,
 } = useQuoteCart()
 
+const {
+  contact,
+  todayIso,
+  initDates,
+  nameError,
+  phoneError,
+  emailError,
+  isContactValid,
+} = useQuoteContact()
+
+onMounted(initDates)
+
+// 一進頁面就滿江紅很難看，按過「確認詢價」之後才開始即時顯示錯誤
+const showErrors = ref(false)
+
 // 匯出結果沿用原本的行內訊息，只有送出流程改用 UIAlert
 const exportMessage = ref('')
 
@@ -18,11 +33,15 @@ const exportCsv = () => {
 // 送出前先跳一次確認，避免誤按；空清單則直接跳錯誤提示
 const isConfirmOpen = ref(false)
 const isEmptyAlertOpen = ref(false)
+const isContactAlertOpen = ref(false)
 const isSubmittedOpen = ref(false)
 const submittedText = ref('')
 
+// 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯
 const confirmText = computed(
-  () => `共 ${count.value} 項將送出詢價，送出後我們會與您聯繫報價。`,
+  () => `共 ${count.value} 項將送出詢價。
+聯絡人 ${contact.value.name}　${contact.value.phone}
+希望交期 ${contact.value.deliveryDate}`,
 )
 
 const openConfirm = () => {
@@ -34,11 +53,20 @@ const openConfirm = () => {
     return
   }
 
+  showErrors.value = true
+
+  if (!isContactValid.value) {
+    isContactAlertOpen.value = true
+
+    return
+  }
+
   isConfirmOpen.value = true
 }
 
 const submitQuote = async () => {
-  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${count.value} 項。我們會盡快與您聯繫。`
+  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${count.value} 項。
+希望交期 ${contact.value.deliveryDate}，我們會盡快與您聯繫。`
 
   // 等確認視窗的關閉動畫跑完再開成功視窗，兩個才不會疊在一起
   await new Promise((resolve) => setTimeout(resolve, 200))
@@ -71,7 +99,7 @@ const pendingRemoveText = computed(() => {
 
   return target
     ? `${target.category}　${target.summary}
-${target.detail}`
+${target.detail}　×${target.quantity} 支`
     : ''
 })
 
@@ -123,7 +151,7 @@ const removeConfirmed = () => {
         <UIEmptyState
           v-if="!count"
           title="詢價單目前是空的"
-          description="在品項頁選好規格、填完尺寸後，按「加入詢價」即可加入這裡。"
+          description="在品項頁選好規格、填完數量後，按「加入詢價」即可加入這裡。"
         />
 
         <template v-else>
@@ -134,7 +162,8 @@ const removeConfirmed = () => {
                   <th data-align="center" class="w-1">#</th>
                   <th>品項</th>
                   <th>選擇</th>
-                  <th>尺寸</th>
+                  <th>規格</th>
+                  <th data-align="center" class="w-1">數量</th>
                   <th data-align="center" class="w-1">動作</th>
                 </tr>
               </thead>
@@ -144,6 +173,7 @@ const removeConfirmed = () => {
                   <td>{{ item.category }}</td>
                   <td>{{ item.summary }}</td>
                   <td>{{ item.detail }}</td>
+                  <td data-align="center">{{ item.quantity }} 支</td>
                   <td data-align="center">
                     <UIFormButton
                       text="刪除"
@@ -164,6 +194,110 @@ const removeConfirmed = () => {
         <p v-if="exportMessage" class="text-brand-700 m-0 text-sm font-bold">
           {{ exportMessage }}
         </p>
+      </UIPageContent>
+
+      <!-- 相關選購項目 -->
+      <UIPageContent class="flex flex-col gap-4">
+        <div>
+          <h2 class="text-brand-900 m-0 text-xl font-bold">相關選購項目</h2>
+          <p class="text-nurse-600 m-0 mt-1 text-sm">
+            還需要其他鋼材嗎？點選即可繼續加入詢價。
+          </p>
+        </div>
+
+        <ProductRelatedList />
+      </UIPageContent>
+
+      <!-- 交期與聯絡資訊 -->
+      <UIPageContent class="flex flex-col gap-4">
+        <div>
+          <h2 class="text-brand-900 m-0 text-xl font-bold">交期與聯絡資訊</h2>
+          <p class="text-nurse-600 m-0 mt-1 text-sm">
+            標示 <span class="text-rose-500">*</span> 為必填，我們才能回覆報價。
+          </p>
+        </div>
+
+        <UIGrid>
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup label="希望交期">
+              <UIFormDate v-model="contact.deliveryDate" :min="todayIso" />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup
+              label="聯絡人姓名"
+              star
+              :warning-text="showErrors ? nameError : ''"
+            >
+              <UIFormInput v-model="contact.name" placeholder="請輸入姓名" />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup label="公司名稱">
+              <UIFormInput
+                v-model="contact.company"
+                placeholder="個人詢價可不填"
+              />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup
+              label="聯絡電話"
+              star
+              :warning-text="showErrors ? phoneError : ''"
+            >
+              <UIFormInput
+                v-model="contact.phone"
+                type="tel"
+                placeholder="請輸入電話號碼"
+              />
+            </UIFormGroup>
+          </UIGridItem>
+
+          <UIGridItem sm="12" md="6">
+            <UIFormGroup
+              label="電子郵件 (Email)"
+              :warning-text="showErrors ? emailError : ''"
+            >
+              <UIFormInput
+                v-model="contact.email"
+                type="email"
+                placeholder="example@company.com"
+              />
+            </UIFormGroup>
+          </UIGridItem>
+        </UIGrid>
+
+        <!-- 送貨地點框起來自成一區：縣市與地址是一組的，
+             而且整組都可以不填（自行取貨），跟上面的必填欄位分開比較不會誤會 -->
+        <fieldset class="border-nurse-200 m-0 rounded-lg border p-4">
+          <legend class="text-brand-800 px-1 text-sm font-bold">
+            送貨地點<span class="text-nurse-500 text-xs font-normal">
+              （自行取貨可不填）
+            </span>
+          </legend>
+
+          <UIGrid>
+            <UIGridItem sm="12" md="6">
+              <UIFormGroup label="縣市">
+                <UIFormSelect
+                  v-model="contact.shippingCity"
+                  :options="TAIWAN_CITIES"
+                  placeholder="請選擇縣市"
+                />
+              </UIFormGroup>
+            </UIGridItem>
+
+            <UIGridItem sm="12" md="6">
+              <UIFormGroup label="詳細地址">
+                <UIFormInput v-model="contact.shippingAddress" />
+              </UIFormGroup>
+            </UIGridItem>
+          </UIGrid>
+        </fieldset>
       </UIPageContent>
 
       <!-- 確認送出 -->
@@ -232,7 +366,16 @@ const removeConfirmed = () => {
     <UIAlert
       v-model="isEmptyAlertOpen"
       title="詢價單是空的"
-      text="請先從品項頁選好規格、填完尺寸後加入，再回來送出。"
+      text="請先從品項頁選好規格、填完數量後加入，再回來送出。"
+      icon="warning"
+      confirm-text="知道了"
+    />
+
+    <!-- 聯絡資訊沒填齊 -->
+    <UIAlert
+      v-model="isContactAlertOpen"
+      title="請補齊聯絡資訊"
+      text="聯絡人姓名與聯絡電話為必填，我們才能回覆報價。"
       icon="warning"
       confirm-text="知道了"
     />

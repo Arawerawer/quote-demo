@@ -198,7 +198,7 @@ type Step = 'cut' | 'shape' | 'spec'
 const steps: { id: Step; title: string }[] = [
   { id: 'cut', title: '選刀數' },
   { id: 'shape', title: '選形狀' },
-  { id: 'spec', title: '填尺寸' },
+  { id: 'spec', title: '填規格' },
 ]
 
 const currentStep = ref<Step>('cut')
@@ -245,14 +245,17 @@ const goToStep = async (step: Step) => {
     ?.scrollTo({ top: 0, left: 0, behavior: 'smooth' })
 }
 
-// 只做標記，不自動跳下一步——由使用者按「下一步」決定何時前進
+// 單選題：選完直接進下一步，不用再按「下一步」。
+// 要改回上一步的選擇時，點上方步驟條或「上一步」回來重選即可
 const selectGroup = (groupId: string) => {
   selectedGroupId.value = groupId
   selectedShapeId.value = null
+  goToStep('shape')
 }
 
 const selectShape = (shapeId: string) => {
   selectedShapeId.value = shapeId
+  goToStep('spec')
 }
 
 const segmentKey = (shapeId: string, segment: string) => `${shapeId}-${segment}`
@@ -277,6 +280,12 @@ const setSegmentValue = (segment: string, value: string | number) => {
 
 const { addItem } = useQuoteCart()
 
+// 數量、參考圖檔與備註不隨形狀切換保留（每筆詢價各自獨立），
+// 所以用單一 ref，而不是像 segmentValues 那樣以 shapeId 做 key
+const quantity = ref<number | undefined>(undefined)
+const attachmentFiles = ref<File[]>([])
+const note = ref('')
+
 // 加入成功的提示，1.5 秒自動關；不放確認鈕才不會擋住接著填下一筆
 const isAddedAlertOpen = ref(false)
 const addedAlertText = ref('')
@@ -292,15 +301,26 @@ const activeSegments = computed(() => {
   return shape.developed ? [...shape.segments, shape.developed] : shape.segments
 })
 
-// 至少填一格才給加入，避免整筆空白進詢價單。
-// 這只是防呆，不做數值範圍檢查——Notion 的限制條件是打問號的。
-const canAddToCart = computed(() =>
-  activeSegments.value.some((segment) => segmentValue(segment) !== ''),
+// 數量清空時 model 會是空字串，而 '3' >= 1 會因強制轉型成立，
+// 所以要先用 typeof 卡住型別再比大小
+const hasQuantity = computed(
+  () => typeof quantity.value === 'number' && quantity.value >= 1,
 )
 
-// 欄位是兩欄排的，總數為奇數時最後會空半格，
+// 數量必填、尺寸至少填一格，避免整筆空白進詢價單。
+// 這只是防呆，不做數值範圍檢查——Notion 的限制條件是打問號的。
+const canAddToCart = computed(
+  () =>
+    hasQuantity.value &&
+    activeSegments.value.some((segment) => segmentValue(segment) !== ''),
+)
+
+// 欄位是兩欄排的（各段尺寸 + 數量），總數為奇數時最後會空半格，
 // 露出 UIFieldGroup 當格線用的灰底；補一格白的蓋掉。
-const hasFieldFiller = computed(() => activeSegments.value.length % 2 === 1)
+// 上傳與備註在 UIFieldGroup 外面，不算進來。
+const hasFieldFiller = computed(
+  () => (activeSegments.value.length + 1) % 2 === 1,
+)
 
 const addToCart = () => {
   const group = selectedGroup.value
@@ -316,11 +336,21 @@ const addToCart = () => {
     .join('、')
 
   const summary = `${group.title} ${shape.title}`
+  const itemQuantity = Number(quantity.value)
+  // 只記檔名，檔案本身沒有後端可傳
+  const attachmentName = attachmentFiles.value
+    .map((file) => file.name)
+    .join('、')
+
+  const itemNote = note.value.trim()
 
   addItem({
     category: '鋼板彎折',
     summary,
     detail,
+    quantity: itemQuantity,
+    attachmentName,
+    note: itemNote,
   })
 
   // 清掉這一種已填的尺寸，回到第一步方便接著填下一筆
@@ -328,7 +358,15 @@ const addToCart = () => {
     delete segmentValues.value[segmentKey(shape.id, segment)]
   }
 
-  addedAlertText.value = `${summary}\n${detail}`
+  const attachmentCount = attachmentFiles.value.length
+
+  quantity.value = undefined
+  attachmentFiles.value = []
+  note.value = ''
+
+  addedAlertText.value = `${summary}\n${detail}\n數量 ${itemQuantity} 支${
+    attachmentCount ? `\n參考圖檔 ${attachmentCount} 個：${attachmentName}` : ''
+  }${itemNote ? `\n備註：${itemNote}` : ''}`
   isAddedAlertOpen.value = true
 
   goToStep('cut')
@@ -347,7 +385,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
   <div class="mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
     <UIPageHeader
       title="鋼板彎折"
-      description="依序選擇彎折刀數與形狀，最後依圖面標示輸入各段尺寸。"
+      description="依序選擇彎折刀數與形狀，最後依圖面標示填寫規格與數量。"
       class="mb-4"
     />
 
@@ -411,17 +449,9 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
               選擇彎折刀數
             </h2>
             <p class="text-brand-600 mt-1 mb-0 text-sm leading-[1.6]">
-              選好刀數後，按右上角「下一步」繼續。
+              點選刀數後自動進入下一步。
             </p>
           </div>
-
-          <UIFormButton
-            text="下一步"
-            icon="ChevronRight"
-            icon-position="right"
-            :disabled="!selectedGroupId"
-            @click="goToStep('shape')"
-          />
         </header>
 
         <div class="bg-desert-50 px-6 py-7 max-md:px-4 max-md:py-5">
@@ -445,7 +475,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
       <UIBoxCard
         v-else-if="currentStep === 'shape' && selectedGroup"
         :title="`${selectedGroup.title}：選擇形狀`"
-        description="選好形狀後，按右下角「下一步」繼續。"
+        description="點選形狀後自動進入下一步。"
       >
         <div class="flex flex-col gap-5">
           <div
@@ -490,17 +520,10 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
             </button>
           </div>
 
-          <div class="flex flex-wrap items-center justify-between gap-3">
+          <div class="flex flex-wrap items-center gap-3">
             <UIFormButton variant="secondary" @click="goToStep('cut')">
               上一步
             </UIFormButton>
-            <UIFormButton
-              text="下一步"
-              icon="ChevronRight"
-              icon-position="right"
-              :disabled="!selectedShapeId"
-              @click="goToStep('spec')"
-            />
           </div>
         </div>
       </UIBoxCard>
@@ -563,8 +586,8 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
         </UIBoxCard>
 
         <UIBoxCard
-          title="輸入尺寸"
-          description="欄位即為圖面上的字母標示，Notion 未定義其他欄位，故只列這些。"
+          title="填寫規格"
+          description="欄位即為圖面上的字母標示，另需填寫數量；參考圖示與備註為選填。"
         >
           <div class="flex flex-col gap-5">
             <UIFieldGroup :col="12">
@@ -599,22 +622,74 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                 />
               </UIField>
 
+              <UIField title="數量" :md="6">
+                <UIFormInputUnit
+                  :model-value="quantity ?? ''"
+                  type="number"
+                  min="1"
+                  step="1"
+                  suffix="支"
+                  placeholder="請輸入數量"
+                  @update:model-value="
+                    quantity = $event === '' ? undefined : Number($event)
+                  "
+                />
+              </UIField>
+
               <div
                 v-if="hasFieldFiller"
                 class="col-span-full bg-white max-md:hidden md:col-span-6"
               />
             </UIFieldGroup>
 
-            <div class="flex flex-wrap items-center justify-between gap-3">
-              <UIFormButton variant="secondary" @click="goToStep('shape')">
-                上一步
-              </UIFormButton>
-              <UIFormButton
-                text="加入詢價"
-                icon="Plus"
-                :disabled="!canAddToCart"
-                @click="addToCart"
+            <!-- 上傳與備註放在 UIFieldGroup 外面：這兩個都比一般欄位高，
+                 塞進格線裡那一列會比其他列高一截 -->
+            <div class="grid gap-2">
+              <span class="text-brand-800 text-sm font-bold">
+                上傳參考圖示<span class="text-nurse-500 font-normal">
+                  （選填）
+                </span>
+              </span>
+              <UIFormFileUpload
+                v-model="attachmentFiles"
+                accept="image/*,application/pdf,.pdf,.dwg,.dxf"
+                hint="支援圖片、PDF、DWG、DXF，可一次選多個"
               />
+            </div>
+
+            <div class="grid gap-2">
+              <span class="text-brand-800 text-sm font-bold">
+                備註說明<span class="text-nurse-500 font-normal">
+                  （選填）
+                </span>
+              </span>
+              <UIFormTextarea
+                v-model="note"
+                :rows="3"
+                :maxlength="200"
+                placeholder="有其他需求或說明可以寫在這裡，例如材質、表面處理、交期。"
+              />
+              <span class="text-nurse-500 text-xs">
+                {{ note.length }} / 200
+              </span>
+            </div>
+
+            <div class="flex flex-col gap-3">
+              <p v-if="!hasQuantity" class="text-nurse-500 m-0 text-sm">
+                請填寫數量後即可加入詢價。
+              </p>
+
+              <div class="flex flex-wrap items-center justify-between gap-3">
+                <UIFormButton variant="secondary" @click="goToStep('shape')">
+                  上一步
+                </UIFormButton>
+                <UIFormButton
+                  text="加入詢價"
+                  icon="Plus"
+                  :disabled="!canAddToCart"
+                  @click="addToCart"
+                />
+              </div>
             </div>
           </div>
         </UIBoxCard>

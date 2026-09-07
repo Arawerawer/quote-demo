@@ -33,6 +33,12 @@ export interface AppNavigationItem {
   children?: readonly AppNavigationItem[]
   /** true = 不顯示在 sidebar，但路由與麵包屑照常可用 */
   hidden?: boolean
+  /**
+   * true = 頁面內容還沒做完（目前是「待補」空頁）。
+   * 只影響 ProductRelatedList 的推薦卡片（標「即將開放」且不可點），
+   * sidebar 與路由完全不受影響。哪一頁做完就把這行刪掉。
+   */
+  comingSoon?: boolean
 }
 
 const mainNavigation: readonly AppNavigationItem[] = [
@@ -63,6 +69,7 @@ const mainNavigation: readonly AppNavigationItem[] = [
       { title: '版面', to: '/UI/layout', icon: PanelsTopLeft },
       { title: '內容', to: '/UI/content', icon: Rows3 },
       { title: '圖片', to: '/UI/images', icon: Images },
+      { title: '鋼材圖示', to: '/UI/steel-icons', icon: FoldHorizontal },
     ],
   },
   {
@@ -110,36 +117,42 @@ const mainNavigation: readonly AppNavigationItem[] = [
     title: 'C 型鋼',
     to: '/products/c-channel',
     icon: Spline,
+    comingSoon: true,
   },
 
   {
     title: '角鐵',
     to: '/products/angle-steel',
     icon: Ruler,
+    comingSoon: true,
   },
 
   {
     title: '扁鐵',
     to: '/products/flat-bar',
     icon: Minus,
+    comingSoon: true,
   },
 
   {
     title: 'H 型鋼',
     to: '/products/h-beam',
     icon: Columns3,
+    comingSoon: true,
   },
 
   {
     title: '水槽鋼瓦',
     to: '/products/corrugated-sheet',
     icon: Waves,
+    comingSoon: true,
   },
 
   {
     title: '連接板',
     to: '/products/connector-plate',
     icon: Link2,
+    comingSoon: true,
   },
 
   // 入口是右上角的「詢價單」按鈕，不佔 sidebar 位置

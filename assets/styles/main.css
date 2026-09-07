@@ -143,6 +143,20 @@
 }
 
 @layer components {
+  /* 停用原生日曆圖示（欄位右側的圖示由 <UIIcon> 另外畫），並避免它與
+     showPicker() 形成第二條開啟路徑造成 picker 閃爍。
+     必須寫在全域：這條作用在 input 的 shadow DOM，寫進 Date.vue 的
+     <style scoped> 會被編成 input[type='date'][data-v-xxx]::-webkit-...，
+     而 shadow DOM 內部節點不帶 data-v- 屬性，規則會完全失效。
+
+     附帶一提：點擊時年／月／日那一段的藍底改不掉。它是 Chrome 畫在
+     shadow DOM 內的 selection highlight，而 highlight 樣式不會繼承進
+     shadow DOM，::selection 與 ::-webkit-datetime-edit-* 都無效。
+     要改只能改用自訂日期元件，不要再往這裡加 CSS 試。 */
+  .form-date input[type='date']::-webkit-calendar-picker-indicator {
+    display: none;
+  }
+
   .form-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

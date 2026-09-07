@@ -6,6 +6,21 @@ export interface QuoteCartItem {
   summary: string
   /** 尺寸摘要，如「A 10cm、B 20cm」 */
   detail: string
+  /** 數量，單位「支」 */
+  quantity: number
+  /**
+   * 參考圖檔名，多個以「、」串接；沒有上傳時是空字串。
+   * 檔案本身不上傳，只記檔名。
+   * 詢價單表格刻意不顯示這欄——客戶自己填規格時就看過了，
+   * 但匯出的 CSV 要留著，老闆才知道這筆有沒有附圖要跟客戶要。
+   */
+  attachmentName: string
+  /**
+   * 備註說明，客戶自由填寫；沒填時是空字串。
+   * 與 attachmentName 一樣，詢價單表格刻意不顯示——客戶自己填規格時就看過了，
+   * 但匯出的 CSV 要留著，老闆報價時才看得到客戶的特殊要求。
+   */
+  note: string
 }
 
 /**
@@ -43,12 +58,16 @@ export const useQuoteCart = () => {
   }
 
   const buildRows = () => {
-    const header = ['項次', '品項', '選擇', '尺寸']
+    const header = ['項次', '品項', '選擇', '規格', '數量', '參考圖檔', '備註']
+    // 數量帶單位而非純數字——CSV 是給人看的，不是給程式 parse 的
     const body = items.value.map((item, index) => [
       String(index + 1),
       item.category,
       item.summary,
       item.detail,
+      `${item.quantity} 支`,
+      item.attachmentName,
+      item.note,
     ])
 
     return [header, ...body]
