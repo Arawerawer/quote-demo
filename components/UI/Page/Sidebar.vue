@@ -2,7 +2,7 @@
 import { ChevronDown, ChevronRight, X } from '@lucide/vue'
 
 const route = useRoute()
-const { mainNavigation } = useAppNavigation()
+const { sidebarItems } = useAppNavigation()
 const isCollapsed = useState('sidebar-collapsed', () => false)
 const expandedGroups = ref<string[]>(['/UI'])
 const isMobileMenuOpen = useState('sidebar-mobile-menu', () => false)
@@ -32,7 +32,7 @@ const desktopSidebarStyle = computed(() => ({
 const config = {
   eyebrow: 'WORKSPACE',
   title: '主要選單',
-  items: mainNavigation,
+  items: sidebarItems,
 }
 
 const isItemActive = (to: string) => route.path === to
@@ -166,7 +166,11 @@ onBeforeUnmount(() => {
             @mouseenter="positionTooltip"
             @focus="positionTooltip"
           >
-            <span class="flex size-5 shrink-0 items-center justify-center">
+            <!-- 收合時只剩圖示可辨識，所以只有展開狀態才隱藏圖示 -->
+            <span
+              v-if="isCollapsed"
+              class="flex size-5 shrink-0 items-center justify-center"
+            >
               <component :is="item.icon" :size="18" aria-hidden="true" />
             </span>
             <span v-show="!isCollapsed">{{ item.title }}</span>

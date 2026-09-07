@@ -22,3 +22,6 @@ logs
 .env
 .env.*
 !.env.example
+
+# Notion 匯出的原始資料，不進版控
+*.zip

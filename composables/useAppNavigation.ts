@@ -1,20 +1,27 @@
 import {
   AppWindow,
   CalendarDays,
+  ClipboardList,
+  Columns3,
   FilePlus2,
+  FoldHorizontal,
   Home,
   Images,
   LayoutGrid,
   LibraryBig,
+  Link2,
   ListChecks,
   MessageCircleMore,
+  Minus,
   MousePointerClick,
   Palette,
   PanelsTopLeft,
   Rows3,
   Ruler,
+  Spline,
   Table2,
   TextCursorInput,
+  Waves,
   ChartPie,
 } from '@lucide/vue'
 import type { Component } from 'vue'
@@ -24,6 +31,8 @@ export interface AppNavigationItem {
   to: string
   icon: Component
   children?: readonly AppNavigationItem[]
+  /** true = 不顯示在 sidebar，但路由與麵包屑照常可用 */
+  hidden?: boolean
 }
 
 const mainNavigation: readonly AppNavigationItem[] = [
@@ -36,6 +45,7 @@ const mainNavigation: readonly AppNavigationItem[] = [
     title: 'UI 介面',
     to: '/UI',
     icon: LibraryBig,
+    hidden: true,
     children: [
       {
         title: '元件總覽',
@@ -59,30 +69,85 @@ const mainNavigation: readonly AppNavigationItem[] = [
     title: '空白範例頁',
     to: '/example',
     icon: FilePlus2,
+    hidden: true,
   },
 
   {
     title: '清單表格範例頁',
     to: '/example/list-table',
     icon: FilePlus2,
+    hidden: true,
   },
 
   {
     title: '表單欄位範例頁',
     to: '/example/form',
     icon: FilePlus2,
+    hidden: true,
   },
 
   {
     title: '圖表範例頁',
     to: '/example/chart',
     icon: ChartPie,
+    hidden: true,
   },
 
   {
     title: '角鐵詢價工具',
     to: '/quote-builder',
     icon: Ruler,
+    hidden: true,
+  },
+
+  {
+    title: '鋼板彎折',
+    to: '/products/steel-plate-bending',
+    icon: FoldHorizontal,
+  },
+
+  {
+    title: 'C 型鋼',
+    to: '/products/c-channel',
+    icon: Spline,
+  },
+
+  {
+    title: '角鐵',
+    to: '/products/angle-steel',
+    icon: Ruler,
+  },
+
+  {
+    title: '扁鐵',
+    to: '/products/flat-bar',
+    icon: Minus,
+  },
+
+  {
+    title: 'H 型鋼',
+    to: '/products/h-beam',
+    icon: Columns3,
+  },
+
+  {
+    title: '水槽鋼瓦',
+    to: '/products/corrugated-sheet',
+    icon: Waves,
+  },
+
+  {
+    title: '連接板',
+    to: '/products/connector-plate',
+    icon: Link2,
+  },
+
+  // 入口是右上角的「詢價單」按鈕，不佔 sidebar 位置
+  {
+    title: '詢價單',
+    to: '/quote-cart',
+    icon: ClipboardList,
+    hidden: true,
   },
 ]
 
@@ -93,11 +158,14 @@ export const useAppNavigation = () => {
     (item) => item.to !== '/' && !item.children?.length,
   )
   const workspaceItems = mainNavigation.filter((item) => item.children?.length)
+  // sidebar 只顯示沒標 hidden 的項目；hidden 項目的路由與麵包屑不受影響
+  const sidebarItems = mainNavigation.filter((item) => !item.hidden)
 
   return {
     homeItem,
     mainNavigation,
     pageItems,
+    sidebarItems,
     uiWorkspace,
     workspaceItems,
   }

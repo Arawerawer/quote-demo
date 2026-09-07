@@ -18,15 +18,11 @@ watch(
   <div v-else class="flex h-dvh flex-col overflow-hidden">
     <UIPageTopNav />
 
-    <div class="flex min-h-0 flex-1">
-      <UIPageSidebar />
-
-      <main
-        ref="mainContent"
-        class="bg-desert-50 min-w-0 flex-1 overflow-y-scroll"
-      >
-        <NuxtPage />
-      </main>
-    </div>
+    <main
+      ref="mainContent"
+      class="bg-desert-50 min-h-0 min-w-0 flex-1 overflow-y-scroll"
+    >
+      <NuxtPage />
+    </main>
   </div>
 </template>

@@ -42,7 +42,10 @@ Nuxt 3 (`nuxt ^3.21`，傳統目錄結構：`app.vue`／`pages/`／`components/`
 
 - `pageItems` = 沒有 `children` 的項目（獨立頁）
 - `workspaceItems` = 有 `children` 的項目（可展開群組）
+- `sidebarItems` = 沒標 `hidden: true` 的項目，**只有 sidebar 用這個**
 - `homeItem` / `uiWorkspace` 是硬編碼的 `mainNavigation[0]` / `[1]`，**重排陣列會壞掉**
+
+項目上加 `hidden: true` 可讓它從 sidebar 消失，但路由、麵包屑（`UIPageBreadcrumb` 讀的是完整的 `mainNavigation`）照常運作。目前 sidebar 顯示「首頁」與 `pages/products/*` 的七個品項頁；「UI 介面」、四個範例頁、「角鐵詢價工具」與「詢價單」都標了 `hidden`。
 
 目前陣列裡的 `/example/chart` 沒有對應的 page 檔案（`chart.js` 已在依賴中，但頁面未建）。
 

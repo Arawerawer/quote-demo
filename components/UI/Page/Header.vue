@@ -1,13 +1,21 @@
 <script setup lang="ts">
-defineProps<{
-  title: string
-  description?: string
-}>()
+withDefaults(
+  defineProps<{
+    title: string
+    description?: string
+    /** false = 不顯示麵包屑，首頁這種本身就是根層級的頁面用 */
+    showBreadcrumb?: boolean
+  }>(),
+  {
+    description: undefined,
+    showBreadcrumb: true,
+  },
+)
 </script>
 
 <template>
   <header class="flex max-w-full flex-col gap-3">
-    <UIPageBreadcrumb :title="title" />
+    <UIPageBreadcrumb v-if="showBreadcrumb" :title="title" />
 
     <div class="w-full min-w-0">
       <div class="flex w-full items-center gap-3">

@@ -21,6 +21,8 @@ const { homeItem } = useAppNavigation()
     aria-label="返回首頁"
   >
     <ReceiptText :size="24" :stroke-width="2" aria-hidden="true" />
-    <strong class="px-2 leading-[1.4] max-sm:px-0 max-sm:text-sm">Logo</strong>
+    <strong class="truncate px-2 leading-[1.4] max-sm:px-0 max-sm:text-sm"
+      >順裕鐵材流程demo</strong
+    >
   </NuxtLink>
 </template>
