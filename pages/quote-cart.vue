@@ -45,6 +45,26 @@ const submittedText = ref('')
 // 沒有用 jspdf/html2canvas，因為那會把整頁轉成點陣圖，孔位圖的細線會糊掉。
 const printOrderNo = ref('')
 
+// 列印前把列印版面裡的圖等到解碼完。
+//
+// 這段是必要的，不是保險：nextTick() 只保證 Vue 把 DOM 更新完，不等 <img> 下載；
+// 而列印版面平常是 display:none，瀏覽器對隱藏子樹裡的圖會延後甚至不載；
+// window.print() 又是同步阻塞的。三件事湊起來就會印出空白的圖框。
+// 扁鐵沒踩到是因為 svg 是內嵌標記、沒有網路請求，鋼板彎折的 PNG 有。
+//
+// 用 decode() 而不是 onload：已載好的圖會立即 resolve，
+// 沒載的會等到能無延遲繪製為止，不必自己寫 complete ? ... : addEventListener。
+// 任何一張失敗都不擋列印——寧可少一張圖，也不要按了沒反應。
+const waitForPrintImages = async () => {
+  const images = Array.from(
+    document.querySelectorAll<HTMLImageElement>('.print-only img'),
+  )
+
+  await Promise.all(
+    images.map((image) => image.decode().catch(() => undefined)),
+  )
+}
+
 const exportPdf = async () => {
   exportMessage.value = ''
 
@@ -60,6 +80,7 @@ const exportPdf = async () => {
 
   // 等單號渲染進 DOM 再叫列印，否則印出來的頁首是空的
   await nextTick()
+  await waitForPrintImages()
   window.print()
 }
 
@@ -229,6 +250,22 @@ const removeConfirmed = () => {
                       @click="openDiagram(item.id)"
                       v-html="item.diagramSvg"
                     />
+                    <!-- 靜態圖的品項（鋼板彎折）：縮圖只放第一張（彎折後外形）。
+                         120px 寬裡塞兩張的話各只剩 55px，看不出差別；
+                         點開放大才顯示全部 -->
+                    <button
+                      v-else-if="item.diagramImages?.length"
+                      type="button"
+                      class="border-nurse-200 hover:border-brand-500 block w-[120px] cursor-pointer rounded border bg-white p-1"
+                      :aria-label="`放大檢視 ${item.category} 的圖面`"
+                      @click="openDiagram(item.id)"
+                    >
+                      <img
+                        :src="item.diagramImages[0].src"
+                        :alt="`${item.category} ${item.summary} 圖面`"
+                        class="block h-16 w-full object-contain"
+                      />
+                    </button>
                     <span v-else class="text-nurse-500">—</span>
                   </td>
                   <td data-align="center">{{ item.quantity }} 支</td>
@@ -390,9 +427,31 @@ const removeConfirmed = () => {
           {{ diagramItem.summary }}　{{ diagramItem.detail }}
         </p>
         <div
+          v-if="diagramItem.diagramSvg"
           class="border-nurse-200 rounded-lg border bg-white p-4 [&>svg]:h-auto [&>svg]:w-full"
           v-html="diagramItem.diagramSvg"
         />
+        <!-- 靜態圖可能有兩張（外形 + 展開／立體示意），並排並各自帶圖說 -->
+        <div
+          v-else-if="diagramItem.diagramImages?.length"
+          class="grid gap-4"
+          :class="diagramItem.diagramImages.length > 1 ? 'sm:grid-cols-2' : ''"
+        >
+          <figure
+            v-for="image in diagramItem.diagramImages"
+            :key="image.src"
+            class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-4"
+          >
+            <img
+              :src="image.src"
+              :alt="`${diagramItem.category} ${image.caption}`"
+              class="block h-auto max-h-[60vh] w-auto max-w-full object-contain"
+            />
+            <figcaption class="text-brand-600 mt-3 text-center text-sm">
+              {{ image.caption }}
+            </figcaption>
+          </figure>
+        </div>
         <p class="text-nurse-500 m-0 text-sm">
           此圖為加入詢價單當下的圖面，不會隨後續修改變動。
         </p>

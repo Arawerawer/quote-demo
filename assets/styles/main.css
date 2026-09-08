@@ -330,6 +330,14 @@
     break-inside: avoid;
   }
 
+  /* 靜態圖面（鋼板彎折的 PNG）：印出來不能比版面寬，也不能被切成兩頁。
+     實際高度上限寫在 QuotePrintSheet 的 class 上（單張／並排不同值） */
+  .print-only img {
+    max-width: 100%;
+    height: auto;
+    break-inside: avoid;
+  }
+
   /* 沒有這行，表頭的 brand-500 藍底不會印出來（瀏覽器預設省墨） */
   .print-only,
   .print-only * {

@@ -135,12 +135,44 @@ const orDash = (value: string) => value || '—'
 
       <!-- 圖面。svg 內容是本站 template 產生的快照，不是使用者輸入 -->
       <figure
+        v-if="item.diagramSvg"
         class="print-block m-0 mb-5 rounded border border-[#c9ccc9] p-3 [&>svg]:h-auto [&>svg]:w-full"
       >
-        <div v-if="item.diagramSvg" v-html="item.diagramSvg" />
-        <p v-else class="m-0 py-6 text-center text-xs text-[#6c6f6c]">
-          此品項無圖面
-        </p>
+        <div v-html="item.diagramSvg" />
+      </figure>
+
+      <!-- 靜態圖面（鋼板彎折的 PNG）。兩張時並排：直排的話光圖就吃掉大半頁，
+           下面的項目明細會被擠到第二頁，一項一頁的版面就破了。
+           限高不限寬——每張圖的長寬比都不一樣，限寬的話直式的圖會太高 -->
+      <figure
+        v-else-if="item.diagramImages?.length"
+        class="print-block m-0 mb-5 grid gap-3 rounded border border-[#c9ccc9] p-3"
+        :class="item.diagramImages.length > 1 ? 'grid-cols-2' : 'grid-cols-1'"
+      >
+        <span
+          v-for="image in item.diagramImages"
+          :key="image.src"
+          class="grid content-start justify-items-center gap-2"
+        >
+          <img
+            :src="image.src"
+            :alt="`${item.category} ${image.caption}`"
+            class="block w-auto max-w-full object-contain"
+            :class="
+              item.diagramImages!.length > 1 ? 'max-h-[55mm]' : 'max-h-[70mm]'
+            "
+          />
+          <span class="text-center text-xs text-[#6c6f6c]">
+            {{ image.caption }}
+          </span>
+        </span>
+      </figure>
+
+      <figure
+        v-else
+        class="print-block m-0 mb-5 rounded border border-[#c9ccc9] p-3"
+      >
+        <p class="m-0 py-6 text-center text-xs text-[#6c6f6c]">此品項無圖面</p>
       </figure>
 
       <!-- 直式排列而非表格：一項只有一列的話，表頭會比內容還長 -->

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ChevronRight } from '@lucide/vue'
+import type { QuoteDiagramImage } from '~/composables/useQuoteCart'
 
 // 資料完全依照 Notion「順裕鐵材 / 鋼板彎折形狀」整理：
 // 每個刀數群組沿用 Notion 原圖，參數代號（A、B、C…）與圖上標示一致。
@@ -322,6 +323,30 @@ const hasFieldFiller = computed(
   () => (activeSegments.value.length + 1) % 2 === 1,
 )
 
+// 加入詢價單時要一併帶走的圖面。來源就是步驟三畫面上那兩張圖，
+// 分支條件沿用 hasSecondFigure：有展開圖就配展開圖，盤形改配立體示意，
+// 五刀兩者都沒有就只有一張。
+const diagramImages = computed<QuoteDiagramImage[]>(() => {
+  const group = selectedGroup.value
+  const shape = selectedShape.value
+
+  if (!group || !shape) {
+    return []
+  }
+
+  const images: QuoteDiagramImage[] = [
+    { src: shape.image, caption: '彎折後外形' },
+  ]
+
+  if (group.developedImage) {
+    images.push({ src: group.developedImage, caption: '展開圖' })
+  } else if (group.id === 'tray') {
+    images.push({ src: `${IMG}/bend-tray-3d.png`, caption: '盤形立體示意' })
+  }
+
+  return images
+})
+
 const addToCart = () => {
   const group = selectedGroup.value
   const shape = selectedShape.value
@@ -351,6 +376,12 @@ const addToCart = () => {
     quantity: itemQuantity,
     attachmentName,
     note: itemNote,
+    // 這個品項頁的圖是 Notion 原圖裁切出來的固定 PNG，不是即時算出來的 svg，
+    // 所以走 diagramImages 而不是 diagramSvg
+    diagramSvg: '',
+    // 要在下面 goToStep('cut') 清掉選擇之前取值，清完 computed 會變成空陣列。
+    // .value 當下就取成一般陣列，之後 computed 再變也不影響已加入的這筆
+    diagramImages: diagramImages.value,
   })
 
   // 清掉這一種已填的尺寸，回到第一步方便接著填下一筆

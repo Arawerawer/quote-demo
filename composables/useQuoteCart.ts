@@ -1,3 +1,11 @@
+/** 圖面的一張圖：來源路徑與圖說 */
+export interface QuoteDiagramImage {
+  /** public/ 底下的靜態圖路徑，如 /images/products/bending/cut-4/shape-1.png */
+  src: string
+  /** 圖說，如「彎折後外形」 */
+  caption: string
+}
+
 export interface QuoteCartItem {
   id: number
   /** 品項，如「鋼板彎折」 */
@@ -32,6 +40,21 @@ export interface QuoteCartItem {
    * 內容由本站自己的 template 產生，不是使用者輸入，所以 v-html 是安全的。
    */
   diagramSvg: string
+  /**
+   * 加入當下的靜態圖面，一到兩張（外形圖 + 展開圖／立體示意）；沒有靜態圖的品項省略。
+   *
+   * 與 diagramSvg 分成兩欄而不是共用一欄，因為兩者的本質不同：
+   * diagramSvg 是依使用者輸入即時算出來的向量標記，這裡是固定的檔案路徑。
+   * 混在同一欄（把 <img> 塞進 diagramSvg）會有三個問題：
+   * 破壞該欄「內容是 svg」的契約、讓 [&>svg]:w-full 這類定尺寸的選擇器失效、
+   * 而且程式無法列舉出「有哪些圖要等載入」——列印前的 waitForPrintImages()
+   * （見 pages/quote-cart.vue）就做不到了。
+   *
+   * 選填：只有 svg 的品項頁不必為了它多傳一個空陣列。
+   * 消費端一律用 `item.diagramImages?.length` 判斷，
+   * 語意跟 diagramSvg 的「空字串 = 沒圖」是同一種約定。
+   */
+  diagramImages?: QuoteDiagramImage[]
 }
 
 /**
