@@ -152,8 +152,14 @@ const totalLength = lengthCm
 // 所以改一格就得自動補另一格，欄位才會跟圖上的標註一致。
 // 欄位精度是小數第一位，寫回前先四捨五入，避免出現系統自己填的值卻被自己擋下來。
 const roundToField = (value: number) => Number(value.toFixed(1))
-// 孔徑欄位停用中，圖上的孔用固定示意半徑（原圖也沒標孔徑）
-const HOLE_PREVIEW_RADIUS = 5
+// 孔徑欄位停用中，圖上的孔用固定示意半徑（原圖也沒標孔徑）。
+//
+// 半徑取 4 是為了讓兩端的孔不要黏在框線上。板子在圖上被畫粗了（真實的
+// 300×7.5cm 是 40:1，圖上畫成 8:1），所以 5cm 的邊緣只換算成 10 個單位，
+// 孔一大就直接頂到左右框線。半徑 4 時孔緣離框線還有 6 個單位。
+//
+// 想再放大孔徑的話要連 PLATE_HEIGHT 一起縮，不能只調這個值。
+const HOLE_PREVIEW_RADIUS = 4
 
 // 欄位只能填到小數第一位，四捨五入的誤差最多 0.05cm。
 // 算式是「邊緣×2 + 間距×(孔數−1)」，所以誤差會從兩處放大：
@@ -294,20 +300,26 @@ const drawnLayout = computed(() => {
         Math.abs(edge * 2 + (n - 1) * pitch - totalLength) <=
           closureTolerance(n)
 
-  // 填的數字在容差內對得起來，就照使用者填的間距畫。
-  // 但邊緣改用「總長減去孔群長度後左右均分」算出來，不直接沿用輸入值——
-  // 容差是為了讓四捨五入過的間距（41.4 之類）能通過，若把那點誤差全丟給尾端，
-  // 圖上就會出現頭尾差一點點的排法。均分後兩端必然完全相等。
+  // 填的數字在容差內對得起來，就照使用者填的「邊緣」畫，誤差全部由間距吸收。
+  //
+  // 為什麼是邊緣讓間距讓步，不是反過來：欄位只能填到小數第一位，系統連動時
+  // 兩段四捨五入的方向可能相反，誤差就會跑回使用者剛打的那一格。例如打邊緣
+  // 4.5（5 孔）→ 間距算出 72.75 → 寫回欄位進位成 72.8 → 圖若照 72.8 反推邊緣
+  // 就變成 4.4，畫面顯示的數字跟剛剛打的不一樣。實測 43384 組有 76% 會這樣，
+  // 最大偏差 0.7cm。讓剛輸入的那格保持原值，畫面才對得起輸入。
+  //
+  // 間距改用「總長減去兩端邊緣後平均分配」算出來，所以每段仍完全相等、
+  // 兩端仍完全對稱，加總必定剛好等於總長。
   if (isBalanced) {
-    const spread = n === 1 ? 0 : pitch * (n - 1)
-    const balancedEdge = (totalLength - spread) / 2
+    const balancedPitch =
+      n === 1 ? 0 : (totalLength - edge * 2) / Math.max(n - 1, 1)
 
     return {
-      edge: balancedEdge,
-      pitch: n === 1 ? 0 : pitch,
+      edge,
+      pitch: balancedPitch,
       positions: Array.from(
         { length: n },
-        (_, index) => balancedEdge + index * pitch,
+        (_, index) => edge + index * balancedPitch,
       ),
     }
   }
@@ -342,8 +354,13 @@ const displayPitch = computed(() => drawnLayout.value.pitch)
 // ——那樣算會在數字對不起來時顯示出不對稱的尾距（例如 77.5cm）
 const tailDistance = computed(() => drawnLayout.value.edge)
 
-// 原圖寫的是「5cm」「72.5cm」，不是「5.0cm」，所以整數不補小數位
-const formatCm = (value: number) => Number(value.toFixed(1)).toString()
+// 原圖寫的是「5cm」「72.5cm」，不是「5.0cm」，所以整數不補小數位。
+//
+// 取到小數第二位是因為間距要吸收欄位四捨五入的誤差（見 drawnLayout），
+// 算出來可能是 72.75 這種欄位放不下的值。這裡若跟著只留一位，
+// 標註就會顯示 72.8、四段加起來變成 300.2，跟總長對不起來。
+// 尾數的 0 會被 Number() 去掉，所以 72.5 仍顯示成「72.5」不是「72.50」。
+const formatCm = (value: number) => Number(value.toFixed(2)).toString()
 
 // ---- 側視圖版面（比照 Notion image 12.png 的比例與標註方式）----
 // 矩形做成扁長的 8:1，跟原圖一致；左側留 96 給「3" = 7.5cm」那個兩行標註
@@ -361,12 +378,50 @@ const MIN_LABEL_WIDTH = 42
 
 const sideScale = PLATE_WIDTH / totalLength
 
-const sideHoles = computed(() =>
-  holePositions.value.map((pos) => ({
-    cx: PLATE_X + pos * sideScale,
+// 兩端留白至少要有相鄰孔距的三分之一寬，不足就補到這個比例。
+//
+// 為什麼要補：這是示意圖不是施工圖。預設值（端距 5cm、節距 72.5cm）嚴格等比
+// 畫出來，端距只有節距的 7%，兩端的孔幾乎黏在框線上、標註也擠成一團，
+// 看不出「兩端各留一段」這件事——而那正是這張圖要說明的重點。
+//
+// 只放大、不縮小，而且上限是等比節距：端距本來就跟節距差不多寬（例如
+// 邊 48／節 51）時完全不介入，維持等比；只有等比會小到看不清楚時才出手。
+const MIN_EDGE_RATIO = 1 / 3
+
+// 孔的畫面座標。注意這裡不是 pos * sideScale——兩端留白會被放大，
+// 中間節距等量壓縮以維持外框總寬不變（見上面的 MIN_EDGE_RATIO）。
+//
+// 下方尺寸鏈的刻度線與標註位置全部由 sideHoles[].cx 推導（見 dimSegments），
+// 所以改這裡刻度會自動跟著移動，不必也不要另外調。
+//
+// 標註文字的數字取自 drawnLayout 的真實 cm 值，跟畫面比例無關，
+// 所以「5cm」「72.5cm」不會因為這裡放大而變動。
+const sideHoles = computed(() => {
+  const positions = holePositions.value
+  const count = positions.length
+
+  if (!count) {
+    return []
+  }
+
+  // 單孔沒有節距可當基準，照原本的規則擺正中間
+  if (count === 1) {
+    return [{ cx: PLATE_X + PLATE_WIDTH / 2, r: HOLE_PREVIEW_RADIUS }]
+  }
+
+  const rawEdge = drawnLayout.value.edge * sideScale
+  const rawPitch = drawnLayout.value.pitch * sideScale
+  const drawnEdge = Math.min(
+    Math.max(rawEdge, rawPitch * MIN_EDGE_RATIO),
+    Math.max(rawEdge, rawPitch),
+  )
+  const drawnPitch = (PLATE_WIDTH - drawnEdge * 2) / (count - 1)
+
+  return Array.from({ length: count }, (_, index) => ({
+    cx: PLATE_X + drawnEdge + index * drawnPitch,
     r: HOLE_PREVIEW_RADIUS,
-  })),
-)
+  }))
+})
 
 // 標註區段：左端距 → 每一段節距 → 右端距，全部標出來（原圖是四段都寫）
 const dimSegments = computed(() => {
@@ -406,29 +461,19 @@ const dimSegments = computed(() => {
     isEnd: true,
   })
 
-  return segments.map((segment, index) => {
+  return segments.map((segment) => {
     const width = segment.x2 - segment.x1
-    const fits = width >= MIN_LABEL_WIDTH
-
-    // 端距通常很窄（5cm 只有 10 個單位），但原圖有標，
-    // 所以窄的時候改把字推到圖外側，不是整個不寫
-    if (!fits && segment.isEnd) {
-      const isLeft = index === 0
-
-      return {
-        ...segment,
-        mid: isLeft ? segment.x1 - 4 : segment.x2 + 4,
-        anchor: isLeft ? 'end' : 'start',
-        showLabel: true,
-      }
-    }
 
     return {
       ...segment,
       mid: (segment.x1 + segment.x2) / 2,
-      anchor: 'middle',
-      // 中間的節距段太窄就只留線與刻度，免得孔多時文字擠成一團
-      showLabel: fits,
+      // 端距一律寫在線段正中間。5cm 的線段只有 20 單位、放不下字，
+      // 但 Notion 原圖就是讓它自然超出去跟旁邊的節距擠在一起，
+      // 推到圖外側反而會跟左側的面寬標註疊在一起、整排也不齊。
+      //
+      // 中間的節距段照舊：太窄就只留線與刻度，
+      // 因為孔一多（12 孔以上）每段都寫會糊成一片。
+      showLabel: segment.isEnd || width >= MIN_LABEL_WIDTH,
     }
   })
 })
@@ -1017,7 +1062,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                       v-if="segment.showLabel"
                       :x="segment.mid"
                       :y="DIM_LINE_Y + 22"
-                      :text-anchor="segment.anchor"
+                      text-anchor="middle"
                       font-size="15"
                       font-weight="bold"
                       fill="var(--color-brand-900)"
