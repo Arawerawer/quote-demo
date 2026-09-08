@@ -17,6 +17,7 @@ const {
   emailError,
   taxIdError,
   isContactValid,
+  shippingText,
 } = useQuoteContact()
 
 onMounted(initDates)
@@ -37,6 +38,30 @@ const isEmptyAlertOpen = ref(false)
 const isContactAlertOpen = ref(false)
 const isSubmittedOpen = ref(false)
 const submittedText = ref('')
+
+// 匯出 PDF 走瀏覽器列印：版面在 QuotePrintSheet，分頁規則在 main.css 的 @media print。
+// 使用者會看到系統列印視窗，目的地選「另存為 PDF」。
+//
+// 沒有用 jspdf/html2canvas，因為那會把整頁轉成點陣圖，孔位圖的細線會糊掉。
+const printOrderNo = ref('')
+
+const exportPdf = async () => {
+  exportMessage.value = ''
+
+  if (!count.value) {
+    isEmptyAlertOpen.value = true
+
+    return
+  }
+
+  // makeOrderNo() 每次呼叫都會給不同的隨機碼，所以先產生一次存起來，
+  // 整份 PDF 的每一頁頁首才會是同一個單號
+  printOrderNo.value = makeOrderNo()
+
+  // 等單號渲染進 DOM 再叫列印，否則印出來的頁首是空的
+  await nextTick()
+  window.print()
+}
 
 // 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯
 const confirmText = computed(
@@ -110,6 +135,20 @@ const openRemoveConfirm = (id: number) => {
   isRemoveConfirmOpen.value = true
 }
 
+// 圖面放大檢視。縮圖在表格裡只有 120px 寬，標註的數字根本看不清楚，
+// 點開才看得到孔位細節
+const isDiagramOpen = ref(false)
+const diagramItemId = ref<number | null>(null)
+
+const diagramItem = computed(
+  () => items.value.find((item) => item.id === diagramItemId.value) ?? null,
+)
+
+const openDiagram = (id: number) => {
+  diagramItemId.value = id
+  isDiagramOpen.value = true
+}
+
 const removeConfirmed = () => {
   if (pendingRemoveId.value === null) {
     return
@@ -121,7 +160,9 @@ const removeConfirmed = () => {
 </script>
 
 <template>
-  <div class="mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
+  <!-- screen-only：列印時整個畫面收起來，只留下面的 QuotePrintSheet。
+       這裡面的按鈕、輸入框、彈窗都不該出現在 PDF 裡 -->
+  <div class="screen-only mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
     <UIPageHeader
       title="詢價單"
       description="這裡是各品項頁加入的項目，確認無誤後可匯出 Excel 或送出詢價。"
@@ -139,6 +180,7 @@ const removeConfirmed = () => {
               icon="Download"
               @click="exportCsv"
             />
+            <UIFormButton text="匯出 PDF" icon="Printer" @click="exportPdf" />
             <UIFormButton
               text="清空"
               icon="Trash2"
@@ -164,6 +206,7 @@ const removeConfirmed = () => {
                   <th>品項</th>
                   <th>選擇</th>
                   <th>規格</th>
+                  <th data-align="center" class="w-1">圖</th>
                   <th data-align="center" class="w-1">數量</th>
                   <th data-align="center" class="w-1">動作</th>
                 </tr>
@@ -174,6 +217,20 @@ const removeConfirmed = () => {
                   <td>{{ item.category }}</td>
                   <td>{{ item.summary }}</td>
                   <td>{{ item.detail }}</td>
+                  <td data-align="center">
+                    <!-- 縮圖本身就是按鈕，整張圖都可以點，比另外放一顆
+                         「檢視」按鈕好按，也不用多佔一欄寬度。
+                         svg 內容是本站 template 產生的，不是使用者輸入 -->
+                    <button
+                      v-if="item.diagramSvg"
+                      type="button"
+                      class="border-nurse-200 hover:border-brand-500 block w-[120px] cursor-pointer rounded border bg-white p-1 [&>svg]:block [&>svg]:h-auto [&>svg]:w-full"
+                      :aria-label="`放大檢視 ${item.category} 的圖面`"
+                      @click="openDiagram(item.id)"
+                      v-html="item.diagramSvg"
+                    />
+                    <span v-else class="text-nurse-500">—</span>
+                  </td>
                   <td data-align="center">{{ item.quantity }} 支</td>
                   <td data-align="center">
                     <UIFormButton
@@ -322,6 +379,26 @@ const removeConfirmed = () => {
       </UIPageContent>
     </div>
 
+    <!-- 圖面放大檢視 -->
+    <UIModal
+      v-model="isDiagramOpen"
+      :title="diagramItem ? `${diagramItem.category}　圖面` : '圖面'"
+      size="xl"
+    >
+      <div v-if="diagramItem" class="flex flex-col gap-3">
+        <p class="text-nurse-600 m-0 text-sm">
+          {{ diagramItem.summary }}　{{ diagramItem.detail }}
+        </p>
+        <div
+          class="border-nurse-200 rounded-lg border bg-white p-4 [&>svg]:h-auto [&>svg]:w-full"
+          v-html="diagramItem.diagramSvg"
+        />
+        <p class="text-nurse-500 m-0 text-sm">
+          此圖為加入詢價單當下的圖面，不會隨後續修改變動。
+        </p>
+      </div>
+    </UIModal>
+
     <!-- 清空前的確認 -->
     <UIAlert
       v-model="isClearConfirmOpen"
@@ -383,4 +460,12 @@ const removeConfirmed = () => {
       confirm-text="知道了"
     />
   </div>
+
+  <!-- 列印專用版面。螢幕上完全不佔位，按下「匯出 PDF」時才由 @media print 放出來 -->
+  <QuotePrintSheet
+    :items="items"
+    :contact="contact"
+    :order-no="printOrderNo"
+    :shipping-text="shippingText"
+  />
 </template>

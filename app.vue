@@ -16,7 +16,8 @@ watch(
   <NuxtPage v-if="route.meta.hideAppNavigation" />
 
   <div v-else class="flex h-dvh flex-col overflow-hidden">
-    <UIPageTopNav />
+    <!-- 頂欄不進 PDF（詢價單的「匯出 PDF」走瀏覽器列印） -->
+    <UIPageTopNav class="screen-only" />
 
     <main
       ref="mainContent"

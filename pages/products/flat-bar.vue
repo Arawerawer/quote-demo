@@ -722,6 +722,28 @@ const holeDescription = computed(() => {
   return `總長 ${totalLength} cm 的沖孔位置：左右兩端邊緣各留 ${edge} cm，中間共有 ${segments} 段等距的孔位，間距皆為 ${pitch} cm（${edge} + ${pitch}×${segments} + ${edge} = ${used}cm）。`
 })
 
+// 圖面快照。直接抓已經畫好的 DOM，不另外組一份字串——
+// 組第二份的話畫法一改就會跟畫面上的圖對不起來。
+//
+// class 要拿掉：那是給品項頁排版用的（w-full），詢價單的縮圖尺寸自己決定。
+// viewBox 留著，縮圖才知道比例。
+const diagram = useTemplateRef<SVGSVGElement>('diagram')
+
+const captureDiagram = () => {
+  const svg = diagram.value
+
+  if (!svg) {
+    return ''
+  }
+
+  const clone = svg.cloneNode(true) as SVGSVGElement
+
+  clone.removeAttribute('class')
+  clone.removeAttribute('style')
+
+  return clone.outerHTML
+}
+
 const addToCart = () => {
   if (!canAddToCart.value) {
     return
@@ -743,6 +765,9 @@ const addToCart = () => {
     .join('、')
   const itemNote = note.value.trim()
 
+  // 快照要在下面清空欄位之前抓，清完圖就變回預設值了
+  const diagramSvg = captureDiagram()
+
   addItem({
     category: '扁鐵',
     summary,
@@ -750,6 +775,7 @@ const addToCart = () => {
     quantity,
     attachmentName,
     note: itemNote,
+    diagramSvg,
   })
 
   const attachmentCount = attachmentFiles.value.length
@@ -980,6 +1006,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                    黑白工程圖風格。座標由上方的 PLATE_* 常數算出 -->
               <svg
                 v-if="!holePositionError"
+                ref="diagram"
                 viewBox="0 0 780 190"
                 class="mx-auto h-auto w-full"
                 role="img"
