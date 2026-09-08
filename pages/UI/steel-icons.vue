@@ -51,11 +51,11 @@ const icons: { name: SteelIconName; title: string }[] = [
           <div
             v-for="icon in icons"
             :key="icon.name"
-            class="text-brand-900 border-nurse-200 flex h-24 items-center justify-center gap-3 rounded-lg border bg-white p-3"
+            class="text-brand-900 border-nurse-200 flex h-20 items-center justify-center gap-2 rounded-lg border bg-white p-3"
           >
             <UISteelIcon
               :name="icon.name"
-              :size="44"
+              :size="32"
               class="text-brand-500 shrink-0"
             />
             <strong class="text-base">{{ icon.title }}</strong>

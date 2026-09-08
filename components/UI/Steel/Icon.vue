@@ -16,7 +16,7 @@ export type SteelIconName =
  * 全部用 currentColor 描邊，外層給 text-* 就能換色；
  * 面的填色刻意分三階（亮面／暗面／端面），讓立體感不靠陰影也看得出來。
  */
-withDefaults(
+const props = withDefaults(
   defineProps<{
     name: SteelIconName
     size?: number | string
@@ -24,6 +24,19 @@ withDefaults(
   {
     size: 48,
   },
+)
+
+/**
+ * 線寬隨 size 反向補償，讓實際描邊固定在 1.2 螢幕像素。
+ *
+ * viewBox 是 64，所以畫面上的線寬 = stroke-width * size / 64。
+ * 寫死 1.6 的話 size 44 是 1.1px、size 32 只剩 0.8px，會糊掉變淡。
+ * 改成算的，之後調任何尺寸都不用再手動補線寬。
+ *
+ * 上限 2.6：C 型鋼與 H 型鋼的稜線很密，再粗就會互相黏住。
+ */
+const strokeWidth = computed(() =>
+  Math.min(2.6, (1.2 * 64) / (Number(props.size) || 48)),
 )
 </script>
 
@@ -34,7 +47,7 @@ withDefaults(
     viewBox="0 0 64 64"
     fill="none"
     stroke="currentColor"
-    stroke-width="1.6"
+    :stroke-width="strokeWidth"
     stroke-linejoin="round"
     stroke-linecap="round"
     aria-hidden="true"
@@ -183,27 +196,27 @@ withDefaults(
 <style scoped lang="scss">
 /* 三階填色都從 currentColor 推導，換 text-* 時整組跟著走 */
 .face-top {
-  fill: color-mix(in srgb, currentColor 10%, transparent);
-}
-
-.face-side {
-  fill: color-mix(in srgb, currentColor 22%, transparent);
-}
-
-.face-inner {
   fill: color-mix(in srgb, currentColor 16%, transparent);
 }
 
+.face-side {
+  fill: color-mix(in srgb, currentColor 32%, transparent);
+}
+
+.face-inner {
+  fill: color-mix(in srgb, currentColor 24%, transparent);
+}
+
 .face-end {
-  fill: color-mix(in srgb, currentColor 4%, transparent);
+  fill: color-mix(in srgb, currentColor 8%, transparent);
 }
 
 .face-hole {
-  fill: color-mix(in srgb, currentColor 26%, transparent);
+  fill: color-mix(in srgb, currentColor 38%, transparent);
 }
 
 /* 背側的輔助線壓淡，避免跟輪廓搶視線 */
 .edge-soft {
-  opacity: 0.45;
+  opacity: 0.55;
 }
 </style>

@@ -131,7 +131,6 @@ const mainNavigation: readonly AppNavigationItem[] = [
     title: '扁鐵',
     to: '/products/flat-bar',
     icon: Minus,
-    comingSoon: true,
   },
 
   {

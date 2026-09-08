@@ -7,13 +7,18 @@ defineProps<{
 
 <template>
   <section class="border-nurse-200 overflow-hidden rounded-2xl border bg-white">
-    <header class="border-nurse-200 border-b p-5">
-      <h2 class="text-brand-900 m-0 text-xl leading-[1.45] font-bold">
-        {{ title }}
-      </h2>
-      <p class="text-brand-600 mt-1 mb-0 text-sm leading-[1.6]">
-        {{ description }}
-      </p>
+    <header class="border-nurse-200 flex items-start gap-4 border-b p-5">
+      <div class="min-w-0 flex-1">
+        <h2 class="text-brand-900 m-0 text-xl leading-[1.45] font-bold">
+          {{ title }}
+        </h2>
+        <p class="text-brand-600 mt-1 mb-0 text-sm leading-[1.6]">
+          {{ description }}
+        </p>
+      </div>
+
+      <!-- 右上角的操作按鈕，沒填就完全不佔位（flex 空節點不會撐開） -->
+      <slot name="header-action" />
     </header>
 
     <div class="bg-desert-50 px-6 py-7 max-md:px-4 max-md:py-5">

@@ -39,12 +39,12 @@ const productItems = computed(() =>
           v-for="item in productItems"
           :key="item.to"
           :to="item.to"
-          class="group text-brand-900 border-nurse-200 hover:border-brand-500 hover:bg-brand-50 hover:ring-brand-300 flex h-24 items-center justify-center gap-3 rounded-lg border bg-white p-3 text-center no-underline transition-all duration-200 hover:ring-2"
+          class="group text-brand-900 border-nurse-200 hover:border-brand-500 hover:bg-brand-50 hover:ring-brand-300 flex h-20 items-center justify-center gap-2 rounded-lg border bg-white p-3 text-center no-underline transition-all duration-200 hover:ring-2"
         >
           <UISteelIcon
             v-if="item.steelIcon"
             :name="item.steelIcon"
-            :size="44"
+            :size="32"
             class="text-brand-500 shrink-0"
           />
           <strong class="text-base">{{ item.title }}</strong>
