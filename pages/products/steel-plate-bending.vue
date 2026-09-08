@@ -587,7 +587,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
 
         <UIBoxCard
           title="填寫規格"
-          description="欄位即為圖面上的字母標示，另需填寫數量；參考圖示與備註為選填。"
+          description="欄位即為圖面上的字母標示，另需填寫數量；參考圖與備註為選填。"
         >
           <div class="flex flex-col gap-5">
             <UIFieldGroup :col="12">
@@ -646,7 +646,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                  塞進格線裡那一列會比其他列高一截 -->
             <div class="grid gap-2">
               <span class="text-brand-800 text-sm font-bold">
-                上傳參考圖示<span class="text-nurse-500 font-normal">
+                上傳參考圖<span class="text-nurse-500 font-normal">
                   （選填）
                 </span>
               </span>
