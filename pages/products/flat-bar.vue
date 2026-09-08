@@ -1102,8 +1102,7 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
                 {{ HOLE_ERROR_TEXT }}
               </figcaption>
               <figcaption v-else class="text-nurse-500 m-0 text-center text-xs">
-                孔的大小為示意，未按比例（Notion
-                原圖也未標註孔徑）。此圖依您填寫的數值即時繪製，實際加工以雙方確認的圖面為準。
+                孔的大小為示意，未按比例。此圖依您填寫的數值即時繪製，實際加工以雙方確認的圖面為準。
               </figcaption>
             </figure>
 
