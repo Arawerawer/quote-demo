@@ -1,27 +1,20 @@
 <script setup lang="ts">
 import type { QuoteCartItem } from '~/composables/useQuoteCart'
 
-// 這一頁走購物車的勾選模型：表格列出「收集了什麼」，
-// 送出與匯出的範圍則是「勾選了哪些」。東西都留著，只送打了勾的。
+// 清單裡的每一項都是要詢價的：送出與匯出的範圍一律是整個 items，
+// 不要的項目直接刪掉。沒有勾選那一層。
 const {
   items,
   count,
   updateItem,
   removeItem,
   clearItems,
-  selectedItems,
-  selectedCount,
-  isSelected,
-  toggleSelected,
-  isAllSelected,
-  isPartlySelected,
-  toggleAll,
   makeOrderNo,
   exportCsv: exportCartCsv,
 } = useQuoteCart()
 
-// 一項都沒勾就沒東西可送，送出與兩個匯出都要擋
-const hasSelection = computed(() => selectedCount.value > 0)
+// 空清單就沒東西可送，送出與兩個匯出都要擋
+const hasItems = computed(() => count.value > 0)
 
 const {
   contact,
@@ -44,8 +37,7 @@ const showErrors = ref(false)
 const exportMessage = ref('')
 
 const exportCsv = () => {
-  // 傳 selectedItems 而不是 items：匯出的是勾選的那些，不是整個清單
-  exportMessage.value = exportCartCsv(selectedItems.value)
+  exportMessage.value = exportCartCsv(items.value)
 }
 
 // 送出前先跳一次確認，避免誤按；空清單則直接跳錯誤提示
@@ -85,7 +77,7 @@ const exportPdf = async () => {
   exportMessage.value = ''
 
   // 按鈕的 disabled 是視覺層，程式面仍要擋
-  if (!hasSelection.value) {
+  if (!hasItems.value) {
     isEmptyAlertOpen.value = true
 
     return
@@ -101,24 +93,17 @@ const exportPdf = async () => {
   window.print()
 }
 
-// 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯。
-// 沒全勾時要講清楚只送勾選的那幾項，客戶才不會以為整份清單都送出去
-const confirmText = computed(() => {
-  const scope = isAllSelected.value
-    ? `共 ${selectedCount.value} 項將送出詢價。`
-    : `已勾選的 ${selectedCount.value} 項將送出詢價（未勾選的 ${
-        count.value - selectedCount.value
-      } 項會留在清單裡，不會送出）。`
-
-  return `${scope}
+// 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯
+const confirmText = computed(
+  () => `共 ${count.value} 項將送出詢價。
 聯絡人 ${contact.value.name}　${contact.value.phone}
-希望交期 ${contact.value.deliveryDate}`
-})
+希望交期 ${contact.value.deliveryDate}`,
+)
 
 const openConfirm = () => {
   exportMessage.value = ''
 
-  if (!hasSelection.value) {
+  if (!hasItems.value) {
     isEmptyAlertOpen.value = true
 
     return
@@ -136,7 +121,7 @@ const openConfirm = () => {
 }
 
 const submitQuote = async () => {
-  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${selectedCount.value} 項。
+  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${count.value} 項。
 希望交期 ${contact.value.deliveryDate}，我們會盡快與您聯繫。`
 
   // 等確認視窗的關閉動畫跑完再開成功視窗，兩個才不會疊在一起
@@ -227,7 +212,7 @@ const applyEdit = (payload: Omit<QuoteCartItem, 'id'>) => {
     return
   }
 
-  // id 不變，所以這一列的勾選狀態與項次都會原樣保留
+  // id 不變，所以這一列的項次會原樣保留，不會跳到最後面去
   updateItem(editingId.value, payload)
 
   isEditOpen.value = false
@@ -262,7 +247,7 @@ const toggleNote = (id: number) => {
   <div class="screen-only mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
     <UIPageHeader
       title="詢價單"
-      description="這裡是各品項頁加入的項目，勾選要詢價的項目後可匯出 Excel 或送出詢價。"
+      description="這裡是各品項頁加入的項目，確認後可匯出 Excel 或送出詢價。"
       class="mb-4"
     />
 
@@ -272,17 +257,17 @@ const toggleNote = (id: number) => {
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-brand-900 m-0 text-xl font-bold">詢價清單</h2>
           <div class="flex flex-wrap gap-2">
-            <!-- 匯出與送出的範圍都是勾選的項目，沒勾就沒東西可做 -->
+            <!-- 匯出與送出的範圍都是整個清單，空的就沒東西可做 -->
             <UIFormButton
               text="匯出 Excel"
               icon="Download"
-              :disabled="!hasSelection"
+              :disabled="!hasItems"
               @click="exportCsv"
             />
             <UIFormButton
               text="匯出 PDF"
               icon="Printer"
-              :disabled="!hasSelection"
+              :disabled="!hasItems"
               @click="exportPdf"
             />
             <UIFormButton
@@ -303,23 +288,12 @@ const toggleNote = (id: number) => {
 
         <template v-else>
           <UITable>
-            <!-- 規格欄多了迴紋針與備註、動作欄多了修改鈕、最前面又多了勾選欄，
+            <!-- 規格欄多了迴紋針與備註、動作欄又多了修改鈕，
                  640px 會把規格擠成兩三個字。
                  只覆寫這一張表，不動全站共用的 UITable -->
-            <table class="!min-w-[780px]">
+            <table class="!min-w-[720px]">
               <thead>
                 <tr>
-                  <th data-align="center" class="w-1">
-                    <!-- :model-value + @update:model-value 而不是 v-model：
-                         isAllSelected 是 computed，v-model 會試著寫進去而報錯。
-                         這顆的語意也不是「綁一個布林值」，是「切換全選」 -->
-                    <UIFormCheckbox
-                      :model-value="isAllSelected"
-                      :indeterminate="isPartlySelected"
-                      aria-label="全選"
-                      @update:model-value="toggleAll"
-                    />
-                  </th>
                   <th data-align="center" class="w-1">#</th>
                   <th>品項</th>
                   <th>選擇</th>
@@ -330,24 +304,7 @@ const toggleNote = (id: number) => {
                 </tr>
               </thead>
               <tbody>
-                <!-- 沒勾的整列調淡：長清單裡光靠一個小方框太不明顯，
-                     客戶會沒發現有幾項沒被勾到 -->
-                <tr
-                  v-for="(item, index) in items"
-                  :key="item.id"
-                  :class="isSelected(item.id) ? '' : 'opacity-55'"
-                >
-                  <td data-align="center">
-                    <!-- ⚠️ 不要在這裡加「未勾選時顯示淡色勾」的提示。
-                         試過，結果是客戶把提示勾看成真的勾，
-                         明明沒選卻以為選了，跟下面「已勾選 N 項」對不起來。
-                         空框就是空框，這是 checkbox 唯一不會被誤讀的狀態 -->
-                    <UIFormCheckbox
-                      :model-value="isSelected(item.id)"
-                      :aria-label="`選取第 ${index + 1} 項　${item.category} ${item.summary}`"
-                      @update:model-value="toggleSelected(item.id)"
-                    />
-                  </td>
+                <tr v-for="(item, index) in items" :key="item.id">
                   <td data-align="center">{{ index + 1 }}</td>
                   <td>{{ item.category }}</td>
                   <td>{{ item.summary }}</td>
@@ -438,15 +395,10 @@ const toggleNote = (id: number) => {
             </table>
           </UITable>
 
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
-            <p class="text-nurse-600 m-0">
-              目前清單 {{ count }} 項，已勾選 {{ selectedCount }} 項
-            </p>
-            <!-- 三顆按鈕都變灰時要講原因，不然客戶只會覺得按了沒反應 -->
-            <p v-if="!hasSelection" class="m-0 font-bold text-rose-600">
-              請至少勾選一項才能匯出或送出。
-            </p>
-          </div>
+          <p class="text-nurse-600 m-0 text-sm">
+            目前清單
+            {{ count }} 項，全部都會一起送出；不需要的請按「刪除」移除。
+          </p>
         </template>
 
         <p v-if="exportMessage" class="text-brand-700 m-0 text-sm font-bold">
@@ -565,16 +517,16 @@ const toggleNote = (id: number) => {
         <div>
           <h2 class="text-brand-900 m-0 text-xl font-bold">確認詢價</h2>
           <p class="text-nurse-600 m-0 mt-1 text-sm">
-            送出後我們會依上方<strong>已勾選</strong>的項目與您聯繫報價。
+            送出後我們會依上方清單的<strong>全部項目</strong>與您聯繫報價。
           </p>
         </div>
 
         <UIFormButton
           class="w-full"
-          :text="hasSelection ? `確認詢價（${selectedCount} 項）` : '確認詢價'"
+          :text="hasItems ? `確認詢價（${count} 項）` : '確認詢價'"
           icon="Send"
           size="lg"
-          :disabled="!hasSelection"
+          :disabled="!hasItems"
           @click="openConfirm"
         />
       </UIPageContent>
@@ -703,15 +655,11 @@ const toggleNote = (id: number) => {
       confirm-text="知道了"
     />
 
-    <!-- 沒東西可送：清單是空的、或是有項目但一項都沒勾 -->
+    <!-- 沒東西可送：清單是空的 -->
     <UIAlert
       v-model="isEmptyAlertOpen"
-      :title="count ? '尚未勾選任何項目' : '詢價單是空的'"
-      :text="
-        count
-          ? '請在清單裡勾選要詢價的項目，再匯出或送出。'
-          : '請先從品項頁選好規格、填完數量後加入，再回來送出。'
-      "
+      title="詢價單是空的"
+      text="請先從品項頁選好規格、填完數量後加入，再回來送出。"
       icon="warning"
       confirm-text="知道了"
     />
@@ -726,10 +674,9 @@ const toggleNote = (id: number) => {
     />
   </div>
 
-  <!-- 列印專用版面。螢幕上完全不佔位，按下「匯出 PDF」時才由 @media print 放出來。
-       傳 selectedItems 而不是 items：PDF 印的是要送出的那幾項 -->
+  <!-- 列印專用版面。螢幕上完全不佔位，按下「匯出 PDF」時才由 @media print 放出來 -->
   <QuotePrintSheet
-    :items="selectedItems"
+    :items="items"
     :contact="contact"
     :order-no="printOrderNo"
     :shipping-text="shippingText"

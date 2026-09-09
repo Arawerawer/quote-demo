@@ -127,24 +127,16 @@ export const buildAddedText = (item: Omit<QuoteCartItem, 'id'>) => {
  * 跨頁共用的詢價單。刻意存已組好的顯示字串而非原始值，
  * 這樣各品項頁的資料結構不同也能共用同一張表格。
  * 用 useState 保存，換頁不會消失，重整理才清空。
+ *
+ * 清單裡的每一項都是要詢價的——沒有勾選這一層。
+ * 不要的項目直接刪掉，送出／匯出的範圍一律是整個 items。
+ * （曾經做過購物車式的勾選結帳，已整包移除：這是報價單不是購物車，
+ * 客戶加進來就是要問價，多一層勾選只是多一個會漏勾的步驟。）
  */
 export const useQuoteCart = () => {
   const items = useState<QuoteCartItem[]>('quote-cart-items', () => [])
   // id 計數器也要放 useState，用 module-level 變數在 SSR 下會跨請求共用
   const nextId = useState<number>('quote-cart-next-id', () => 1)
-
-  /**
-   * 這次要送出／匯出哪幾項。比照購物車的勾選：清單是「我收集了什麼」，
-   * 勾選是「這次要結帳哪些」，東西都留著但只送打了勾的。
-   *
-   * 存 id 而不是存整筆：項目被「修改」時 id 不變，勾選就自動跟著，
-   * 存物件的話還要比對內容。
-   *
-   * 跟清單放同一個 composable（而不是像 useQuoteContact 那樣分出去），
-   * 是因為兩者生命週期完全綁在一起——刪項目要清它的勾、清空要清全部。
-   * 分開的話這些同步就得由每個呼叫端自己記得做。
-   */
-  const selectedIds = useState<number[]>('quote-selected-ids', () => [])
 
   /**
    * 最後一筆是不是「送出詢價」加進來的——那條路會馬上把使用者帶到詢價單頁。
@@ -161,7 +153,7 @@ export const useQuoteCart = () => {
   const count = computed(() => items.value.length)
 
   /**
-   * 回傳新項目的 id，讓呼叫端能接著操作它（「送出詢價」要只勾這一項）。
+   * 回傳新項目的 id，讓呼叫端能接著操作它。
    *
    * isInstant 標記這次走的是不是「送出詢價」。預設 false，所以待補的品項頁
    * 忘記傳只會讓右上角多閃一下，不會少掉該有的提示——漏傳的後果要看得見而且無害。
@@ -174,8 +166,6 @@ export const useQuoteCart = () => {
     isLastAddInstant.value = isInstant
 
     items.value = [...items.value, { ...item, id }]
-    // 加進來的預設就勾選——客戶按「加入詢價」的意思就是這項要詢
-    selectedIds.value = [...selectedIds.value, id]
     nextId.value += 1
 
     return id
@@ -194,57 +184,10 @@ export const useQuoteCart = () => {
 
   const removeItem = (id: number) => {
     items.value = items.value.filter((item) => item.id !== id)
-    // 一定要一起清：留下指向不存在項目的 id，會讓 isAllSelected 的
-    // 「勾選數 === 項目數」永遠不成立，全選框從此卡在半勾狀態
-    selectedIds.value = selectedIds.value.filter(
-      (selectedId) => selectedId !== id,
-    )
   }
 
   const clearItems = () => {
     items.value = []
-    selectedIds.value = []
-  }
-
-  // ---- 勾選 ----
-
-  const selectedItems = computed(() =>
-    items.value.filter((item) => selectedIds.value.includes(item.id)),
-  )
-
-  const selectedCount = computed(() => selectedItems.value.length)
-
-  const isSelected = (id: number) => selectedIds.value.includes(id)
-
-  const toggleSelected = (id: number) => {
-    selectedIds.value = isSelected(id)
-      ? selectedIds.value.filter((selectedId) => selectedId !== id)
-      : [...selectedIds.value, id]
-  }
-
-  // 空清單不算全選，否則沒東西時全選框會顯示成打勾
-  const isAllSelected = computed(
-    () => items.value.length > 0 && selectedCount.value === items.value.length,
-  )
-
-  /** 勾了一部分——全選框要顯示成「—」而不是空的 */
-  const isPartlySelected = computed(
-    () => selectedCount.value > 0 && !isAllSelected.value,
-  )
-
-  const toggleAll = () => {
-    selectedIds.value = isAllSelected.value
-      ? []
-      : items.value.map((item) => item.id)
-  }
-
-  /**
-   * 只勾這一項，其餘全部取消——品項頁「送出詢價」用。
-   * 對應購物網站的「直接購買」：商品照樣進購物車，
-   * 只是幫使用者先勾好那一項，原本收集的項目都還在（只是沒打勾）。
-   */
-  const selectOnly = (id: number) => {
-    selectedIds.value = [id]
   }
 
   // 產生假單號，格式沿用 quote-builder
@@ -278,9 +221,9 @@ export const useQuoteCart = () => {
   /**
    * 匯出 CSV，回傳要顯示給使用者的訊息。
    *
-   * rows 刻意必填而不是預設讀 items——要匯出的是「勾選的那些」，
-   * 不是整個清單。給預設值的話忘記傳參會靜默匯出錯的資料，
-   * 必填則是編譯期就報錯。
+   * rows 刻意必填而不是預設讀 items：呼叫端傳什麼就匯出什麼，
+   * 這個函式不去猜範圍。給預設值的話將來若又要分匯出範圍，
+   * 忘記傳參會靜默匯出錯的資料；必填則是編譯期就報錯。
    */
   const exportCsv = (rows: QuoteCartItem[]) => {
     if (!rows.length) {
@@ -315,14 +258,6 @@ export const useQuoteCart = () => {
     updateItem,
     removeItem,
     clearItems,
-    selectedItems,
-    selectedCount,
-    isSelected,
-    toggleSelected,
-    isAllSelected,
-    isPartlySelected,
-    toggleAll,
-    selectOnly,
     makeOrderNo,
     exportCsv,
   }

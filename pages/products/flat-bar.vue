@@ -4,7 +4,7 @@ import { buildAddedText, type QuoteCartItem } from '~/composables/useQuoteCart'
 // 填寫流程整段在 components/Product/FlatBarForm.vue，
 // 這頁只負責標題、把結果收進詢價單、以及加入後的提示與導頁。
 // 抽出去是為了讓詢價單的「修改」彈窗能共用同一套流程。
-const { addItem, selectOnly } = useQuoteCart()
+const { addItem } = useQuoteCart()
 
 // 加入成功的提示，自動關；不放確認鈕才不會擋住接著填下一筆
 const isAddedAlertOpen = ref(false)
@@ -27,8 +27,9 @@ const handleSubmit = (payload: Omit<QuoteCartItem, 'id'>) => {
 }
 
 /**
- * 送出詢價＝加進清單並「只勾這一項」，比照購物網站的「直接購買」：
- * 商品照樣進購物車，只是幫使用者先勾好，原本收集的項目都還在（沒打勾）。
+ * 送出詢價＝加進清單後直接把使用者帶到詢價單頁。
+ * 跟「加入詢價」唯一的差別就是導頁目標：一個回首頁繼續挑、一個去填聯絡資訊。
+ * 原本收集的項目照樣全部留著，也照樣全部會一起送出。
  *
  * 標題沿用「已加入詢價單」——真正的送出是在詢價單頁按確認，
  * 這裡寫「已送出」會讓客戶以為結束了，結果到了詢價單頁還要再送一次。
@@ -36,7 +37,7 @@ const handleSubmit = (payload: Omit<QuoteCartItem, 'id'>) => {
  * 下一個畫面就是完整的詢價單表格，1 秒內要人掃完等於白放。
  */
 const handleInstant = (payload: Omit<QuoteCartItem, 'id'>) => {
-  selectOnly(addItem(payload, true))
+  addItem(payload, true)
   addedAlertText.value = '正在前往填寫聯絡資訊…'
   alertTimer.value = 1000
   pendingRedirect.value = '/quote-cart'

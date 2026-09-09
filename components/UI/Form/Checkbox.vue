@@ -6,12 +6,12 @@ import { Check, Minus } from '@lucide/vue'
  *
  * defineModel 會在內部留一份本地值，呼叫端若是傳
  * :model-value + 自己的 @update:model-value handler（而不是 v-model）——
- * 像詢價單那樣把勾選狀態存在 selectedIds ——
+ * 例如把選取狀態存成一組 id 陣列、由 handler 自己增刪——
  * 點一下就會把本地值寫成 true/false，從此跟 prop 脱鉤，
  * 之後 prop 再怎麼變都不會反映到畫面。
  *
- * 症狀很迷惑人：資料完全正常（「已勾選 N 項」、整列淡化、
- * 匯出內容都對），只有方框的底色跟勾勾不出來。
+ * 症狀很迷惑人：資料完全正常（計數、匯出內容都對），
+ * 只有方框的底色跟勾勾不出來。
  *
  * 改成直接讀 prop、寫 emit，完全不留本地狀態，
  * v-model 跟 :model-value 兩種用法就都正確。
