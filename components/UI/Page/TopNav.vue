@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { ClipboardList } from '@lucide/vue'
 
-const { count: cartCount } = useQuoteCart()
+const { count: cartCount, isLastAddInstant } = useQuoteCart()
 
 // 數量增加時整顆按鈕閃一下，把使用者的視線帶到右上角。
 // 加入的當下畫面還蓋著「已加入詢價單」提示，這時候播會被錯過，
@@ -9,8 +9,17 @@ const { count: cartCount } = useQuoteCart()
 const isCartHighlighted = ref(false)
 let highlightTimer: ReturnType<typeof setTimeout> | undefined
 
+// 品項頁的「加入詢價」提示是 1.5 秒自動關，關掉再跳首頁；
+// 多等 200ms 是等跳頁完成。品項頁的 timer 改了這裡要跟著改——
+// 刻意不從那邊自動推導：提示秒數是「讓你看清楚加了什麼」、
+// 這個延遲是「等畫面靜下來」，概念上無關，綁在一起以後就沒辦法各自微調。
+const FLASH_DELAY_MS = 1700
+const FLASH_DURATION_MS = 700
+
 watch(cartCount, (next, previous) => {
-  if (next <= previous) {
+  // 「送出詢價」加進來的不閃：使用者這時已經站在詢價單頁了，
+  // 右上角再閃是指著他正在看的東西
+  if (next <= previous || isLastAddInstant.value) {
     return
   }
 
@@ -21,8 +30,8 @@ watch(cartCount, (next, previous) => {
     isCartHighlighted.value = true
     highlightTimer = setTimeout(() => {
       isCartHighlighted.value = false
-    }, 700)
-  }, 1700)
+    }, FLASH_DURATION_MS)
+  }, FLASH_DELAY_MS)
 })
 
 onBeforeUnmount(() => clearTimeout(highlightTimer))

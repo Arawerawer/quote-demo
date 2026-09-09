@@ -146,11 +146,32 @@ export const useQuoteCart = () => {
    */
   const selectedIds = useState<number[]>('quote-selected-ids', () => [])
 
+  /**
+   * 最後一筆是不是「送出詢價」加進來的——那條路會馬上把使用者帶到詢價單頁。
+   *
+   * 存「這次加入是什麼性質」而不是「誰不要播動畫」：
+   * UIPageTopNav 讀了自己決定要不要閃右上角的徽章，
+   * 清單這邊不必知道有那顆按鈕存在。
+   */
+  const isLastAddInstant = useState<boolean>(
+    'quote-cart-last-add-instant',
+    () => false,
+  )
+
   const count = computed(() => items.value.length)
 
-  /** 回傳新項目的 id，讓呼叫端能接著操作它（「送出詢價」要只勾這一項） */
-  const addItem = (item: Omit<QuoteCartItem, 'id'>) => {
+  /**
+   * 回傳新項目的 id，讓呼叫端能接著操作它（「送出詢價」要只勾這一項）。
+   *
+   * isInstant 標記這次走的是不是「送出詢價」。預設 false，所以待補的品項頁
+   * 忘記傳只會讓右上角多閃一下，不會少掉該有的提示——漏傳的後果要看得見而且無害。
+   */
+  const addItem = (item: Omit<QuoteCartItem, 'id'>, isInstant = false) => {
     const id = nextId.value
+
+    // 要在改 items 之前設好：TopNav 是 watch count 的，
+    // 等 count 變了才設就來不及了
+    isLastAddInstant.value = isInstant
 
     items.value = [...items.value, { ...item, id }]
     // 加進來的預設就勾選——客戶按「加入詢價」的意思就是這項要詢
@@ -289,6 +310,7 @@ export const useQuoteCart = () => {
   return {
     items,
     count,
+    isLastAddInstant,
     addItem,
     updateItem,
     removeItem,

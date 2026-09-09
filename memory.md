@@ -401,7 +401,7 @@ A4 扣掉 12mm 邊界剩 273mm。固定佔用約 146mm（頁首 22 + 項次小�
 
 ### 送出詢價（= 蝦皮的「直接購買」）
 
-`selectOnly(addItem(payload))` + 導到 `/quote-cart`。
+`selectOnly(addItem(payload, true))` + 提示 1 秒 + 導到 `/quote-cart`。
 
 語意是**加進清單 + 只勾這一項**，不是「不進清單」。
 [蝦皮台灣幫助中心](https://help.shopee.tw/portal/4/article/137037)原文：
@@ -410,6 +410,57 @@ A4 扣掉 12mm 邊界剩 273mm。固定佔用約 146mm（頁首 22 + 項次小�
 
 這樣客戶看得到自己原本收集的項目都還在（只是沒打勾），
 離開頁面再回來那一筆也還留著——比獨立暫存少一條「東西不見了」的誤會路徑。
+
+### ⚠️ 提示標題不可以寫「已送出詢價」
+
+兩顆送出鈕共用同一顆 `UIAlert`，標題一律「**已加入詢價單**」，差別只在內文與秒數：
+
+|          | 加入詢價                      | 送出詢價                  |
+| -------- | ----------------------------- | ------------------------- |
+| 內文     | `buildAddedText()` 的品項摘要 | 「正在前往填寫聯絡資訊…」 |
+| `timer`  | 1500                          | 1000                      |
+| 關掉後跳 | `/`                           | `/quote-cart`             |
+
+**「送出詢價」按鈕沒有真的送出任何東西**——真正的送出是在詢價單頁按「確認送出詢價單」。
+提示寫「已送出」客戶會以為結束了，結果到了詢價單頁還要再送一次，會愣住。
+
+內文刻意**不重複品項摘要**：只有 1 秒讀不完三四行，而且下一個畫面就是完整的
+詢價單表格，同樣的資訊會用表格好好呈現。那句「正在前往填寫聯絡資訊」是要
+回答「為什麼把我帶走」，塞進摘要會把它擠到最下面變成最不顯眼的一行。
+
+導頁目標記在 `pendingRedirect` ref，秒數記在 `alertTimer` ref。
+**不要改用 `@timeout`**：現有的 `watch(isAddedAlertOpen)` 是為了讓「點背景或按 Esc
+提早關掉」也會導頁，換成 `@timeout` 的話按 Esc 會卡在品項頁。
+
+> `navigateTo` 會把整頁連同 `UIModal` 的 `Teleport` 一起銷毀，
+> 所以那 180ms 的離場動畫**本來就播不到**。這裡不需要
+> `quote-cart.vue:143` 那個 `await setTimeout(200)`——那是「同一頁上 A 視窗關掉、
+> B 視窗開起來」的避讓，這裡沒有第二個視窗要避，多等只是讓人多盯著一個
+> 進度條已經跑完、靜止不動的視窗。
+
+### 右上角徽章閃爍：送出詢價這條路不閃
+
+`addItem(item, isInstant = false)` 的第二個參數會寫進 `isLastAddInstant`，
+`UIPageTopNav` 讀它決定要不要閃。走送出詢價時使用者已經站在詢價單頁了，
+右上角再閃是指著他正在看的東西。
+
+存的是**「這次加入是什麼性質」而不是「誰不要播動畫」**——TopNav 自己決定要不要閃，
+`useQuoteCart` 不必知道有那顆按鈕存在。
+
+⚠️ **`isLastAddInstant` 要在改 `items` 之前設好**，TopNav 是 `watch(count)` 的，
+等 count 變了才設就來不及了。
+
+⚠️ **參數預設 `false`** 是刻意的：五個待補品項頁將來忘記傳，後果只是「多閃一下」——
+看得見而且無害。反過來設計（預設不閃、要閃才發訊號）的話，漏掉會**靜默**少掉提示，
+不會報錯也沒有視覺異常，最難發現。
+
+TopNav 的 `FLASH_DELAY_MS = 1700` 是對著加入詢價的 `timer=1500` + 約 200ms 跳頁算的，
+**品項頁改秒數這裡要跟著改**。刻意不自動推導：提示秒數是「讓你看清楚加了什麼」、
+這個延遲是「等畫面靜下來」，概念上無關，綁在一起以後就沒辦法各自微調。
+
+> 附帶已知現象（未修）：TopNav 掛在 `app.vue`，換頁不會 unmount，
+> 所以它的 `onBeforeUnmount(clearTimeout)` 形同虛設。實際的重入清理靠
+> `watch` 開頭那行 `clearTimeout(highlightTimer)`，已經涵蓋所有會發生的情況。
 
 ### 勾選的 UI 約定
 
@@ -562,12 +613,18 @@ class 裡明明有 `bg-brand-500`、算出來卻是 `rgb(255,255,255)`
 
 ### 這一輪還沒提交的東西
 
-勾選模型 + 填寫流程抽元件那一整批都還在工作區，沒有 commit：
+送出詢價的提示動畫那一批還在工作區，沒有 commit：
+`useQuoteCart.ts`、兩個品項頁、`UI/Page/TopNav.vue`、`memory.md`。
 
-- 新檔（untracked）：`components/Product/FlatBarForm.vue`、`BendingForm.vue`、`StepNav.vue`
-- 已改（modified）：`Checkbox.vue`、`useQuoteCart.ts`、`quote-cart.vue`、
-  `pages/UI/forms.vue`、兩個品項頁、`main.css`、`memory.md`
-- 已刪：`composables/useInstantQuote.ts`
+（勾選模型 + 填寫流程抽元件那一批已經進 `d9832bf` 了。）
+
+### 兩個品項頁的 script 是重複的，之後要抽
+
+`pages/products/flat-bar.vue` 與 `steel-plate-bending.vue` 的 `<script setup>`
+**一字不差**（加了提示動畫後約 45 行）。已經知道要抽成
+`composables/useProductQuoteSubmit.ts` + 一個薄薄的 `ProductSubmitAlert.vue`
+（文字與秒數只留一份，否則抽一半還是會走鐘），但**刻意留到五個待補品項頁要接的時候
+再一起做**——那時才看得出真正的共同點，而且不會跟功能改動混在同一次 commit 裡。
 
 ### ⚠️ 匯出 PDF 還沒經過人眼驗證
 
