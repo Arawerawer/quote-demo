@@ -59,10 +59,11 @@ watch(isAddedAlertOpen, (isOpen, wasOpen) => {
 <template>
   <div class="mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
     <UIPageHeader
-      title="鋼板彎折"
-      description="依序選擇彎折刀數與形狀，最後依圖面標示填寫規格與數量。"
-      class="mb-4"
+    title="鋼板彎折"
+    description="依序選擇彎折刀數與形狀，最後依圖面標示填寫規格與數量。"
+    class="mb-4"
     />
+
 
     <ProductBendingForm
       show-instant-submit

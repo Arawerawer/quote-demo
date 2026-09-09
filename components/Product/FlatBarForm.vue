@@ -893,12 +893,16 @@ const handleInstant = () => {
 
 <template>
   <div ref="root" class="flex flex-col gap-4">
-    <ProductStepNav
+
+    <div class="flex justify-center items-center">
+       <ProductStepNav
       :steps="steps"
       :current="currentStep"
       :is-reachable="(id) => isStepReachable(id as Step)"
       @select="goToStep($event as Step)"
     />
+    </div>
+   
 
     <UIPageContent>
       <!-- 步驟一：尺寸與規格。面寬與厚度寫在卡片上 -->
@@ -944,7 +948,7 @@ const handleInstant = () => {
             />
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap justify-center items-center gap-3">
             <UIFormButton variant="secondary" @click="goPrevious">
               上一步
             </UIFormButton>
@@ -972,7 +976,7 @@ const handleInstant = () => {
             />
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
+          <div class="flex flex-wrap justify-center items-center gap-3">
             <UIFormButton variant="secondary" @click="goPrevious">
               上一步
             </UIFormButton>
@@ -1218,10 +1222,11 @@ const handleInstant = () => {
             </div>
 
             <div class="flex flex-col gap-3">
-              <div class="flex flex-wrap items-center justify-between gap-3">
+              <div class="flex flex-wrap justify-center items-center justify-between gap-3">
                 <UIFormButton variant="secondary" @click="goPrevious">
                   上一步
                 </UIFormButton>
+                <div>|</div>
                 <!-- 兩顆送出鈕包在一起，wrap 時才不會有一顆跑去跟「上一步」並排 -->
                 <div class="flex flex-wrap items-center gap-2">
                   <UIFormButton

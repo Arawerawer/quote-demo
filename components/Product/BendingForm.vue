@@ -520,92 +520,80 @@ const handleInstant = () => {
 
 <template>
   <div ref="root" class="flex flex-col gap-4">
-    <ProductStepNav
-      :steps="steps"
-      :current="currentStep"
-      :is-reachable="(id) => isStepReachable(id as Step)"
-      @select="goToStep($event as Step)"
-    />
 
-    <UIPageContent>
-      <!-- 步驟一：選刀數。
-           沒用 UIBoxCard 是因為它的 header 沒有放按鈕的 slot，
-           而「下一步」要跟標題同一列；樣式直接沿用 UIBoxCard 的寫法。 -->
-      <section
-        v-if="currentStep === 'cut'"
-        class="border-nurse-200 overflow-hidden rounded-2xl border bg-white"
-      >
-        <header
-          class="border-nurse-200 flex flex-wrap items-center justify-between gap-3 border-b p-5"
-        >
-          <div class="min-w-0">
-            <h2 class="text-brand-900 m-0 text-xl leading-[1.45] font-bold">
-              選擇彎折刀數
-            </h2>
-            <p class="text-brand-600 mt-1 mb-0 text-sm leading-[1.6]">
-              點選刀數後自動進入下一步。
-            </p>
-          </div>
-        </header>
-
-        <div class="bg-desert-50 px-6 py-7 max-md:px-4 max-md:py-5">
-          <!-- 直接寫欄數，不走 UIGridItem 的 12 欄換算 -->
-          <div
-            class="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1"
-          >
-            <UISelectableCard
-              v-for="group in bendGroups"
-              :key="group.id"
-              :title="group.title"
-              :description="group.cuts"
-              :selected="selectedGroupId === group.id"
-              @select="selectGroup(group.id)"
-            />
-          </div>
+    <div class="flex justify-center items-center">
+      <ProductStepNav
+        :steps="steps"
+        :current="currentStep"
+        :is-reachable="(id) => isStepReachable(id as Step)"
+        @select="goToStep($event as Step)" />
+    </div>
+    <!-- 步驟一：選刀數。
+         沒用 UIBoxCard 是因為它的 header 沒有放按鈕的 slot，
+         而「下一步」要跟標題同一列；樣式直接沿用 UIBoxCard 的寫法。 -->
+    <section
+      v-if="currentStep === 'cut'"
+      class="border-nurse-200 overflow-hidden rounded-2xl border bg-white">
+      <header
+        class="border-nurse-200 flex flex-wrap items-center justify-between gap-3 border-b p-5">
+        <div class="min-w-0">
+          <h2 class="text-brand-900 m-0 text-xl leading-[1.45] font-bold">
+            選擇彎折刀數
+          </h2>
+          <p class="text-brand-600 mt-1 mb-0 text-sm leading-[1.6]">
+            點選刀數後自動進入下一步。
+          </p>
         </div>
-      </section>
+      </header>
 
-      <!-- 步驟二：選形狀，卡片直接放該形狀的圖 -->
+      <div class="bg-desert-50 px-6 py-7 max-md:px-4 max-md:py-5">
+        <!-- 直接寫欄數，不走 UIGridItem 的 12 欄換算 -->
+        <div
+          class="grid grid-cols-3 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
+          <UISelectableCard
+            v-for="group in bendGroups"
+            :key="group.id"
+            :title="group.title"
+            :description="group.cuts"
+            :selected="selectedGroupId === group.id"
+            @select="selectGroup(group.id)" />
+        </div>
+      </div>
+    </section>
+
+    <!-- 步驟二：選形狀，卡片直接放該形狀的圖 -->
+    <div class="" v-else-if="currentStep === 'shape' && selectedGroup">
       <UIBoxCard
-        v-else-if="currentStep === 'shape' && selectedGroup"
         :title="`${selectedGroup.title}：選擇形狀`"
-        description="點選形狀後自動進入下一步。"
-      >
+        description="點選形狀後自動進入下一步。">
         <div class="flex flex-col gap-5">
           <div
-            class="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1"
-          >
+            class="grid grid-cols-4 gap-4 max-lg:grid-cols-2 max-sm:grid-cols-1">
             <button
               v-for="shape in selectedGroup.shapes"
               :key="shape.id"
               class="group text-brand-900 hover:border-brand-200 hover:bg-brand-50 flex w-full flex-col items-center gap-3 rounded-lg border p-4 transition-all duration-200"
-              :class="
-                selectedShapeId === shape.id
+              :class="selectedShapeId === shape.id
                   ? 'border-brand-500 bg-brand-50 ring-brand-300 ring-2'
                   : 'border-nurse-200 bg-white'
-              "
+                "
               type="button"
-              @click="selectShape(shape.id)"
-            >
+              @click="selectShape(shape.id)">
               <img
                 :src="shape.image"
                 :alt="`${selectedGroup.title} ${shape.title} 形狀圖`"
-                class="block h-28 w-auto max-w-full object-contain"
-              />
+                class="block h-28 w-auto max-w-full object-contain" />
               <span class="flex w-full items-center justify-between">
                 <strong>{{ shape.title }}</strong>
                 <span
                   class="group-hover:border-brand-500 grid size-[22px] shrink-0 place-items-center rounded-full border bg-white"
-                  :class="
-                    selectedShapeId === shape.id
+                  :class="selectedShapeId === shape.id
                       ? 'border-brand-500'
                       : 'border-nurse-500'
-                  "
-                >
+                    ">
                   <span
                     v-if="selectedShapeId === shape.id"
-                    class="bg-brand-400 size-3 rounded-full"
-                  />
+                    class="bg-brand-400 size-3 rounded-full" />
                 </span>
               </span>
               <span class="text-brand-600 w-full text-left text-sm">
@@ -614,201 +602,183 @@ const handleInstant = () => {
             </button>
           </div>
 
-          <div class="flex flex-wrap items-center gap-3">
-            <UIFormButton variant="secondary" @click="goToStep('cut')">
-              上一步
-            </UIFormButton>
-          </div>
+        </div>
+      </UIBoxCard>
+      <div class=" flex-wrap items-center gap-3 mt-4 flex justify-center items-center">
+        <UIFormButton variant="secondary" @click="goToStep('cut')">
+          上一步
+        </UIFormButton>
+      </div>
+    </div>
+
+    <!-- 步驟三：圖面 + 尺寸欄位 -->
+    <div
+      v-else-if="currentStep === 'spec' && selectedGroup && selectedShape"
+      class="flex flex-col gap-6">
+      <UIBoxCard
+        :title="`${selectedGroup.title} ${selectedShape.title}：圖面`"
+        description="左為彎折後外形，右為展開圖，圖上字母即為下方要填的尺寸代號。">
+        <div
+          class="grid gap-4"
+          :class="hasSecondFigure ? 'md:grid-cols-2' : ''">
+          <figure
+            class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6">
+            <img
+              :src="selectedShape.image"
+              :alt="`${selectedGroup.title} ${selectedShape.title} 形狀圖`"
+              class="block h-auto max-h-64 w-auto max-w-full object-contain" />
+            <figcaption class="text-brand-600 mt-3 text-center text-sm">
+              彎折後外形
+            </figcaption>
+          </figure>
+
+          <figure
+            v-if="selectedGroup.developedImage"
+            class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6">
+            <img
+              :src="selectedGroup.developedImage"
+              :alt="`${selectedGroup.title}展開圖`"
+              class="block h-auto max-h-64 w-auto max-w-full object-contain" />
+            <figcaption class="text-brand-600 mt-3 text-center text-sm">
+              展開圖
+            </figcaption>
+          </figure>
+
+          <!-- 盤形沒有展開圖，改附 Notion 的立體示意圖 -->
+          <figure
+            v-else-if="selectedGroup.id === 'tray'"
+            class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6">
+            <img
+              src="/images/products/bending/bend-tray-3d.png"
+              alt="盤形立體示意圖"
+              class="block h-auto max-h-64 w-auto max-w-full object-contain" />
+            <figcaption class="text-brand-600 mt-3 text-center text-sm">
+              盤形立體示意
+            </figcaption>
+          </figure>
         </div>
       </UIBoxCard>
 
-      <!-- 步驟三：圖面 + 尺寸欄位 -->
-      <div
-        v-else-if="currentStep === 'spec' && selectedGroup && selectedShape"
-        class="flex flex-col gap-6"
-      >
-        <UIBoxCard
-          :title="`${selectedGroup.title} ${selectedShape.title}：圖面`"
-          description="左為彎折後外形，右為展開圖，圖上字母即為下方要填的尺寸代號。"
-        >
-          <div
-            class="grid gap-4"
-            :class="hasSecondFigure ? 'md:grid-cols-2' : ''"
-          >
-            <figure
-              class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6"
-            >
-              <img
-                :src="selectedShape.image"
-                :alt="`${selectedGroup.title} ${selectedShape.title} 形狀圖`"
-                class="block h-auto max-h-64 w-auto max-w-full object-contain"
-              />
-              <figcaption class="text-brand-600 mt-3 text-center text-sm">
-                彎折後外形
-              </figcaption>
-            </figure>
+      <UIBoxCard
+        title="填寫規格"
+        description="欄位即為圖面上的字母標示，另需填寫數量；參考圖與備註為選填。">
+        <div class="flex flex-col gap-5">
+          <UIFieldGroup :col="12">
+            <UIField
+              v-for="segment in selectedShape.segments"
+              :key="segment"
+              :title="`${segment} 段長度`"
+              :md="6">
+              <UIFormInputUnit
+                :model-value="segmentValue(segment)"
+                type="number"
+                suffix="cm"
+                :placeholder="`請輸入 ${segment} 段長度`"
+                @update:model-value="setSegmentValue(segment, $event)" />
+            </UIField>
 
-            <figure
-              v-if="selectedGroup.developedImage"
-              class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6"
-            >
-              <img
-                :src="selectedGroup.developedImage"
-                :alt="`${selectedGroup.title}展開圖`"
-                class="block h-auto max-h-64 w-auto max-w-full object-contain"
-              />
-              <figcaption class="text-brand-600 mt-3 text-center text-sm">
-                展開圖
-              </figcaption>
-            </figure>
+            <UIField
+              v-if="selectedShape.developed"
+              :title="`${selectedShape.developed} 展開總長`"
+              :md="6">
+              <UIFormInputUnit
+                :model-value="segmentValue(selectedShape.developed)"
+                type="number"
+                suffix="cm"
+                placeholder="展開圖總長"
+                @update:model-value="
+                  setSegmentValue(selectedShape.developed, $event)
+                  " />
+            </UIField>
 
-            <!-- 盤形沒有展開圖，改附 Notion 的立體示意圖 -->
-            <figure
-              v-else-if="selectedGroup.id === 'tray'"
-              class="border-nurse-200 m-0 grid place-items-center rounded-lg border bg-white p-6"
-            >
-              <img
-                src="/images/products/bending/bend-tray-3d.png"
-                alt="盤形立體示意圖"
-                class="block h-auto max-h-64 w-auto max-w-full object-contain"
-              />
-              <figcaption class="text-brand-600 mt-3 text-center text-sm">
-                盤形立體示意
-              </figcaption>
-            </figure>
+            <UIField title="數量" :md="6">
+              <UIFormInputUnit
+                :model-value="quantity ?? ''"
+                type="number"
+                min="1"
+                step="1"
+                suffix="支"
+                placeholder="請輸入數量"
+                @update:model-value="
+                  quantity = $event === '' ? undefined : Number($event)
+                  " />
+            </UIField>
+
+            <div
+              v-if="hasFieldFiller"
+              class="col-span-full bg-white max-md:hidden md:col-span-6" />
+          </UIFieldGroup>
+
+          <!-- 上傳與備註放在 UIFieldGroup 外面：這兩個都比一般欄位高，
+               塞進格線裡那一列會比其他列高一截 -->
+          <div class="grid gap-2">
+            <span class="text-brand-800 text-sm font-bold">
+              上傳參考圖<span class="text-nurse-500 font-normal">
+                （選填）
+              </span>
+            </span>
+            <!-- 編輯模式：File 物件無法從詢價單還原，只能顯示原本的檔名 -->
+            <p
+              v-if="mode === 'edit' && initialAttachmentName"
+              class="text-nurse-600 m-0 text-xs">
+              原本的參考圖檔：{{ initialAttachmentName }}
+              <span class="text-nurse-500">
+                （重新選擇會取代原本的；不選則保留）
+              </span>
+            </p>
+            <UIFormFileUpload
+              v-model="attachmentFiles"
+              accept="image/*,application/pdf,.pdf,.dwg,.dxf"
+              hint="支援圖片、PDF、DWG、DXF，可一次選多個" />
           </div>
-        </UIBoxCard>
 
-        <UIBoxCard
-          title="填寫規格"
-          description="欄位即為圖面上的字母標示，另需填寫數量；參考圖與備註為選填。"
-        >
-          <div class="flex flex-col gap-5">
-            <UIFieldGroup :col="12">
-              <UIField
-                v-for="segment in selectedShape.segments"
-                :key="segment"
-                :title="`${segment} 段長度`"
-                :md="6"
-              >
-                <UIFormInputUnit
-                  :model-value="segmentValue(segment)"
-                  type="number"
-                  suffix="cm"
-                  :placeholder="`請輸入 ${segment} 段長度`"
-                  @update:model-value="setSegmentValue(segment, $event)"
-                />
-              </UIField>
-
-              <UIField
-                v-if="selectedShape.developed"
-                :title="`${selectedShape.developed} 展開總長`"
-                :md="6"
-              >
-                <UIFormInputUnit
-                  :model-value="segmentValue(selectedShape.developed)"
-                  type="number"
-                  suffix="cm"
-                  placeholder="展開圖總長"
-                  @update:model-value="
-                    setSegmentValue(selectedShape.developed, $event)
-                  "
-                />
-              </UIField>
-
-              <UIField title="數量" :md="6">
-                <UIFormInputUnit
-                  :model-value="quantity ?? ''"
-                  type="number"
-                  min="1"
-                  step="1"
-                  suffix="支"
-                  placeholder="請輸入數量"
-                  @update:model-value="
-                    quantity = $event === '' ? undefined : Number($event)
-                  "
-                />
-              </UIField>
-
-              <div
-                v-if="hasFieldFiller"
-                class="col-span-full bg-white max-md:hidden md:col-span-6"
-              />
-            </UIFieldGroup>
-
-            <!-- 上傳與備註放在 UIFieldGroup 外面：這兩個都比一般欄位高，
-                 塞進格線裡那一列會比其他列高一截 -->
-            <div class="grid gap-2">
-              <span class="text-brand-800 text-sm font-bold">
-                上傳參考圖<span class="text-nurse-500 font-normal">
-                  （選填）
-                </span>
+          <div class="grid gap-2">
+            <span class="text-brand-800 text-sm font-bold">
+              備註說明<span class="text-nurse-500 font-normal">
+                （選填）
               </span>
-              <!-- 編輯模式：File 物件無法從詢價單還原，只能顯示原本的檔名 -->
-              <p
-                v-if="mode === 'edit' && initialAttachmentName"
-                class="text-nurse-600 m-0 text-xs"
-              >
-                原本的參考圖檔：{{ initialAttachmentName }}
-                <span class="text-nurse-500">
-                  （重新選擇會取代原本的；不選則保留）
-                </span>
-              </p>
-              <UIFormFileUpload
-                v-model="attachmentFiles"
-                accept="image/*,application/pdf,.pdf,.dwg,.dxf"
-                hint="支援圖片、PDF、DWG、DXF，可一次選多個"
-              />
-            </div>
+            </span>
+            <UIFormTextarea
+              v-model="note"
+              :rows="3"
+              :maxlength="200"
+              placeholder="有其他需求或說明可以寫在這裡。" />
+            <span class="text-nurse-500 text-xs">
+              {{ note.length }} / 200
+            </span>
+          </div>
 
-            <div class="grid gap-2">
-              <span class="text-brand-800 text-sm font-bold">
-                備註說明<span class="text-nurse-500 font-normal">
-                  （選填）
-                </span>
-              </span>
-              <UIFormTextarea
-                v-model="note"
-                :rows="3"
-                :maxlength="200"
-                placeholder="有其他需求或說明可以寫在這裡。"
-              />
-              <span class="text-nurse-500 text-xs">
-                {{ note.length }} / 200
-              </span>
-            </div>
+          <div class="flex flex-col gap-3">
+            <p v-if="!hasQuantity" class="text-nurse-500 m-0 text-sm">
+              請填寫數量後即可加入詢價。
+            </p>
 
-            <div class="flex flex-col gap-3">
-              <p v-if="!hasQuantity" class="text-nurse-500 m-0 text-sm">
-                請填寫數量後即可加入詢價。
-              </p>
+            <div class="flex flex-wrap justify-center  items-center  gap-3">
+              <UIFormButton variant="secondary" @click="goToStep('shape')">
+                上一步
+              </UIFormButton>
 
-              <div class="flex flex-wrap items-center justify-between gap-3">
-                <UIFormButton variant="secondary" @click="goToStep('shape')">
-                  上一步
-                </UIFormButton>
-                <!-- 兩顆送出鈕包在一起，wrap 時才不會有一顆跑去跟「上一步」並排 -->
-                <div class="flex flex-wrap items-center gap-2">
-                  <UIFormButton
-                    :text="submitText"
-                    icon="Plus"
-                    :appearance="showInstantSubmit ? 'outline' : 'solid'"
-                    :disabled="!canAddToCart"
-                    @click="handleSubmit"
-                  />
-                  <UIFormButton
-                    v-if="showInstantSubmit"
-                    text="送出詢價"
-                    icon="Send"
-                    :disabled="!canAddToCart"
-                    @click="handleInstant"
-                  />
-                </div>
+              <div>|</div>
+              <!-- 兩顆送出鈕包在一起，wrap 時才不會有一顆跑去跟「上一步」並排 -->
+              <div class="flex flex-wrap items-center gap-2">
+                <UIFormButton
+                  :text="submitText"
+                  icon="Plus"
+                  :appearance="showInstantSubmit ? 'outline' : 'solid'"
+                  :disabled="!canAddToCart"
+                  @click="handleSubmit" />
+                <UIFormButton
+                  v-if="showInstantSubmit"
+                  text="送出詢價"
+                  icon="Send"
+                  :disabled="!canAddToCart"
+                  @click="handleInstant" />
               </div>
             </div>
           </div>
-        </UIBoxCard>
-      </div>
-    </UIPageContent>
+        </div>
+      </UIBoxCard>
+    </div>
+
   </div>
 </template>
