@@ -1,12 +1,27 @@
 <script setup lang="ts">
+import type { QuoteCartItem } from '~/composables/useQuoteCart'
+
+// 這一頁走購物車的勾選模型：表格列出「收集了什麼」，
+// 送出與匯出的範圍則是「勾選了哪些」。東西都留著，只送打了勾的。
 const {
   items,
   count,
+  updateItem,
   removeItem,
   clearItems,
+  selectedItems,
+  selectedCount,
+  isSelected,
+  toggleSelected,
+  isAllSelected,
+  isPartlySelected,
+  toggleAll,
   makeOrderNo,
   exportCsv: exportCartCsv,
 } = useQuoteCart()
+
+// 一項都沒勾就沒東西可送，送出與兩個匯出都要擋
+const hasSelection = computed(() => selectedCount.value > 0)
 
 const {
   contact,
@@ -29,7 +44,8 @@ const showErrors = ref(false)
 const exportMessage = ref('')
 
 const exportCsv = () => {
-  exportMessage.value = exportCartCsv()
+  // 傳 selectedItems 而不是 items：匯出的是勾選的那些，不是整個清單
+  exportMessage.value = exportCartCsv(selectedItems.value)
 }
 
 // 送出前先跳一次確認，避免誤按；空清單則直接跳錯誤提示
@@ -68,7 +84,8 @@ const waitForPrintImages = async () => {
 const exportPdf = async () => {
   exportMessage.value = ''
 
-  if (!count.value) {
+  // 按鈕的 disabled 是視覺層，程式面仍要擋
+  if (!hasSelection.value) {
     isEmptyAlertOpen.value = true
 
     return
@@ -84,17 +101,24 @@ const exportPdf = async () => {
   window.print()
 }
 
-// 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯
-const confirmText = computed(
-  () => `共 ${count.value} 項將送出詢價。
+// 送出前把聯絡人與交期再念一次，讓客戶有機會發現打錯。
+// 沒全勾時要講清楚只送勾選的那幾項，客戶才不會以為整份清單都送出去
+const confirmText = computed(() => {
+  const scope = isAllSelected.value
+    ? `共 ${selectedCount.value} 項將送出詢價。`
+    : `已勾選的 ${selectedCount.value} 項將送出詢價（未勾選的 ${
+        count.value - selectedCount.value
+      } 項會留在清單裡，不會送出）。`
+
+  return `${scope}
 聯絡人 ${contact.value.name}　${contact.value.phone}
-希望交期 ${contact.value.deliveryDate}`,
-)
+希望交期 ${contact.value.deliveryDate}`
+})
 
 const openConfirm = () => {
   exportMessage.value = ''
 
-  if (!count.value) {
+  if (!hasSelection.value) {
     isEmptyAlertOpen.value = true
 
     return
@@ -112,7 +136,7 @@ const openConfirm = () => {
 }
 
 const submitQuote = async () => {
-  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${count.value} 項。
+  submittedText.value = `詢價單 ${makeOrderNo()} 已送出，共 ${selectedCount.value} 項。
 希望交期 ${contact.value.deliveryDate}，我們會盡快與您聯繫。`
 
   // 等確認視窗的關閉動畫跑完再開成功視窗，兩個才不會疊在一起
@@ -178,6 +202,58 @@ const removeConfirmed = () => {
   removeItem(pendingRemoveId.value)
   pendingRemoveId.value = null
 }
+
+// ---- 修改：把品項頁的填寫流程原封不動搬進全螢幕彈窗 ----
+
+const isEditOpen = ref(false)
+const editingId = ref<number | null>(null)
+const isEditedAlertOpen = ref(false)
+
+const editingItem = computed(
+  () => items.value.find((item) => item.id === editingId.value) ?? null,
+)
+
+// 沒有 source 的項目重建不出填寫流程，表格那邊也不會顯示修改鈕
+const editingSource = computed(() => editingItem.value?.source ?? null)
+
+const openEdit = (id: number) => {
+  exportMessage.value = ''
+  editingId.value = id
+  isEditOpen.value = true
+}
+
+const applyEdit = (payload: Omit<QuoteCartItem, 'id'>) => {
+  if (editingId.value === null) {
+    return
+  }
+
+  // id 不變，所以這一列的勾選狀態與項次都會原樣保留
+  updateItem(editingId.value, payload)
+
+  isEditOpen.value = false
+  editingId.value = null
+  isEditedAlertOpen.value = true
+}
+
+// ---- 規格欄的參考圖檔與備註 ----
+
+// 檔名是用「、」串的，切回來就是個數。
+// 只顯示個數不列檔名：手機拍的檔名常常超過 30 字，列出來會把規格欄撐爆，
+// 而客戶要確認的是「我剛剛那幾個檔有沒有跟著送出」，數量就足以回答
+const attachmentCountOf = (item: QuoteCartItem) =>
+  item.attachmentName.split('、').filter(Boolean).length
+
+// 備註太長時截斷，點一下才展開。
+// 不只靠 title：那個 tooltip 在觸控裝置上根本不會出現
+const expandedNoteIds = ref<number[]>([])
+
+const isNoteExpanded = (id: number) => expandedNoteIds.value.includes(id)
+
+const toggleNote = (id: number) => {
+  expandedNoteIds.value = isNoteExpanded(id)
+    ? expandedNoteIds.value.filter((noteId) => noteId !== id)
+    : [...expandedNoteIds.value, id]
+}
 </script>
 
 <template>
@@ -186,7 +262,7 @@ const removeConfirmed = () => {
   <div class="screen-only mx-auto w-[min(100%,1180px)] p-6 max-md:p-4">
     <UIPageHeader
       title="詢價單"
-      description="這裡是各品項頁加入的項目，確認無誤後可匯出 Excel 或送出詢價。"
+      description="這裡是各品項頁加入的項目，勾選要詢價的項目後可匯出 Excel 或送出詢價。"
       class="mb-4"
     />
 
@@ -196,12 +272,19 @@ const removeConfirmed = () => {
         <div class="flex flex-wrap items-center justify-between gap-2">
           <h2 class="text-brand-900 m-0 text-xl font-bold">詢價清單</h2>
           <div class="flex flex-wrap gap-2">
+            <!-- 匯出與送出的範圍都是勾選的項目，沒勾就沒東西可做 -->
             <UIFormButton
               text="匯出 Excel"
               icon="Download"
+              :disabled="!hasSelection"
               @click="exportCsv"
             />
-            <UIFormButton text="匯出 PDF" icon="Printer" @click="exportPdf" />
+            <UIFormButton
+              text="匯出 PDF"
+              icon="Printer"
+              :disabled="!hasSelection"
+              @click="exportPdf"
+            />
             <UIFormButton
               text="清空"
               icon="Trash2"
@@ -220,9 +303,23 @@ const removeConfirmed = () => {
 
         <template v-else>
           <UITable>
-            <table>
+            <!-- 規格欄多了迴紋針與備註、動作欄多了修改鈕、最前面又多了勾選欄，
+                 640px 會把規格擠成兩三個字。
+                 只覆寫這一張表，不動全站共用的 UITable -->
+            <table class="!min-w-[780px]">
               <thead>
                 <tr>
+                  <th data-align="center" class="w-1">
+                    <!-- :model-value + @update:model-value 而不是 v-model：
+                         isAllSelected 是 computed，v-model 會試著寫進去而報錯。
+                         這顆的語意也不是「綁一個布林值」，是「切換全選」 -->
+                    <UIFormCheckbox
+                      :model-value="isAllSelected"
+                      :indeterminate="isPartlySelected"
+                      aria-label="全選"
+                      @update:model-value="toggleAll"
+                    />
+                  </th>
                   <th data-align="center" class="w-1">#</th>
                   <th>品項</th>
                   <th>選擇</th>
@@ -233,11 +330,55 @@ const removeConfirmed = () => {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="(item, index) in items" :key="item.id">
+                <!-- 沒勾的整列調淡：長清單裡光靠一個小方框太不明顯，
+                     客戶會沒發現有幾項沒被勾到 -->
+                <tr
+                  v-for="(item, index) in items"
+                  :key="item.id"
+                  :class="isSelected(item.id) ? '' : 'opacity-55'"
+                >
+                  <td data-align="center">
+                    <!-- ⚠️ 不要在這裡加「未勾選時顯示淡色勾」的提示。
+                         試過，結果是客戶把提示勾看成真的勾，
+                         明明沒選卻以為選了，跟下面「已勾選 N 項」對不起來。
+                         空框就是空框，這是 checkbox 唯一不會被誤讀的狀態 -->
+                    <UIFormCheckbox
+                      :model-value="isSelected(item.id)"
+                      :aria-label="`選取第 ${index + 1} 項　${item.category} ${item.summary}`"
+                      @update:model-value="toggleSelected(item.id)"
+                    />
+                  </td>
                   <td data-align="center">{{ index + 1 }}</td>
                   <td>{{ item.category }}</td>
                   <td>{{ item.summary }}</td>
-                  <td>{{ item.detail }}</td>
+                  <td>
+                    <span class="block">{{ item.detail }}</span>
+
+                    <!-- 參考圖檔：迴紋針 + 個數，完整檔名放 title。
+                         客戶送出前要確認的是「檔有沒有跟著送出」，個數就夠了 -->
+                    <span
+                      v-if="item.attachmentName"
+                      class="text-nurse-600 mt-1 flex items-center gap-1 text-xs"
+                      :title="item.attachmentName"
+                    >
+                      <UIIcon name="Paperclip" :size="13" />
+                      參考圖檔 {{ attachmentCountOf(item) }} 個
+                    </span>
+
+                    <!-- 備註併在規格欄下方，不另開一欄：表格已經七欄，
+                         再加一欄手機一定要橫向捲才看得完 -->
+                    <button
+                      v-if="item.note"
+                      type="button"
+                      class="text-nurse-600 mt-1 block max-w-[24ch] cursor-pointer border-0 bg-transparent p-0 text-left text-xs"
+                      :class="isNoteExpanded(item.id) ? '' : 'truncate'"
+                      :title="item.note"
+                      :aria-expanded="isNoteExpanded(item.id)"
+                      @click="toggleNote(item.id)"
+                    >
+                      備註：{{ item.note }}
+                    </button>
+                  </td>
                   <td data-align="center">
                     <!-- 縮圖本身就是按鈕，整張圖都可以點，比另外放一顆
                          「檢視」按鈕好按，也不用多佔一欄寬度。
@@ -270,20 +411,42 @@ const removeConfirmed = () => {
                   </td>
                   <td data-align="center">{{ item.quantity }} 支</td>
                   <td data-align="center">
-                    <UIFormButton
-                      text="刪除"
-                      size="sm"
-                      variant="danger"
-                      appearance="outline"
-                      @click="openRemoveConfirm(item.id)"
-                    />
+                    <div
+                      class="flex items-center justify-center gap-1 max-sm:flex-col"
+                    >
+                      <!-- 沒有 source 的項目重建不出填寫流程，按了也沒東西可改，
+                           所以直接不顯示（例如還沒接編輯器的品項） -->
+                      <UIFormButton
+                        v-if="item.source"
+                        text="修改"
+                        icon="Pencil"
+                        size="sm"
+                        appearance="outline"
+                        @click="openEdit(item.id)"
+                      />
+                      <UIFormButton
+                        text="刪除"
+                        size="sm"
+                        variant="danger"
+                        appearance="outline"
+                        @click="openRemoveConfirm(item.id)"
+                      />
+                    </div>
                   </td>
                 </tr>
               </tbody>
             </table>
           </UITable>
 
-          <p class="text-nurse-600 m-0 text-sm">目前清單：{{ count }} 項</p>
+          <div class="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+            <p class="text-nurse-600 m-0">
+              目前清單 {{ count }} 項，已勾選 {{ selectedCount }} 項
+            </p>
+            <!-- 三顆按鈕都變灰時要講原因，不然客戶只會覺得按了沒反應 -->
+            <p v-if="!hasSelection" class="m-0 font-bold text-rose-600">
+              請至少勾選一項才能匯出或送出。
+            </p>
+          </div>
         </template>
 
         <p v-if="exportMessage" class="text-brand-700 m-0 text-sm font-bold">
@@ -402,15 +565,16 @@ const removeConfirmed = () => {
         <div>
           <h2 class="text-brand-900 m-0 text-xl font-bold">確認詢價</h2>
           <p class="text-nurse-600 m-0 mt-1 text-sm">
-            送出後我們會依上方清單與您聯繫報價。
+            送出後我們會依上方<strong>已勾選</strong>的項目與您聯繫報價。
           </p>
         </div>
 
         <UIFormButton
           class="w-full"
-          text="確認詢價"
+          :text="hasSelection ? `確認詢價（${selectedCount} 項）` : '確認詢價'"
           icon="Send"
           size="lg"
+          :disabled="!hasSelection"
           @click="openConfirm"
         />
       </UIPageContent>
@@ -453,10 +617,48 @@ const removeConfirmed = () => {
           </figure>
         </div>
         <p class="text-nurse-500 m-0 text-sm">
-          此圖為加入詢價單當下的圖面，不會隨後續修改變動。
+          此圖為加入或最後一次修改當下的圖面，不會自動重算。
         </p>
       </div>
     </UIModal>
+
+    <!-- 修改：品項頁的填寫流程原封不動搬進來，改完覆蓋原本那筆 -->
+    <UIModal
+      v-model="isEditOpen"
+      :title="editingItem ? `修改　${editingItem.category}` : '修改'"
+      size="fullscreen"
+    >
+      <!-- v-if 而不是 v-show：表單元件在 setup 就讀 initialState 決定初值，
+           v-show 的話第二次開會沿用上一筆的內容 -->
+      <ProductFlatBarForm
+        v-if="editingItem && editingSource?.productId === 'flat-bar'"
+        mode="edit"
+        :initial-state="editingSource.state"
+        :initial-note="editingItem.note"
+        :initial-attachment-name="editingItem.attachmentName"
+        submit-text="儲存修改"
+        @submit="applyEdit"
+      />
+      <ProductBendingForm
+        v-else-if="editingItem && editingSource?.productId === 'bending'"
+        mode="edit"
+        :initial-state="editingSource.state"
+        :initial-note="editingItem.note"
+        :initial-attachment-name="editingItem.attachmentName"
+        submit-text="儲存修改"
+        @submit="applyEdit"
+      />
+    </UIModal>
+
+    <!-- 修改成功。沿用 UIAlert 當 toast，1.5 秒自動關 -->
+    <UIAlert
+      v-model="isEditedAlertOpen"
+      title="已更新這一筆"
+      text="規格與圖面都已重新產生。"
+      icon="success"
+      :show-confirm-button="false"
+      :timer="1500"
+    />
 
     <!-- 清空前的確認 -->
     <UIAlert
@@ -501,11 +703,15 @@ const removeConfirmed = () => {
       confirm-text="知道了"
     />
 
-    <!-- 清單是空的 -->
+    <!-- 沒東西可送：清單是空的、或是有項目但一項都沒勾 -->
     <UIAlert
       v-model="isEmptyAlertOpen"
-      title="詢價單是空的"
-      text="請先從品項頁選好規格、填完數量後加入，再回來送出。"
+      :title="count ? '尚未勾選任何項目' : '詢價單是空的'"
+      :text="
+        count
+          ? '請在清單裡勾選要詢價的項目，再匯出或送出。'
+          : '請先從品項頁選好規格、填完數量後加入，再回來送出。'
+      "
       icon="warning"
       confirm-text="知道了"
     />
@@ -520,9 +726,10 @@ const removeConfirmed = () => {
     />
   </div>
 
-  <!-- 列印專用版面。螢幕上完全不佔位，按下「匯出 PDF」時才由 @media print 放出來 -->
+  <!-- 列印專用版面。螢幕上完全不佔位，按下「匯出 PDF」時才由 @media print 放出來。
+       傳 selectedItems 而不是 items：PDF 印的是要送出的那幾項 -->
   <QuotePrintSheet
-    :items="items"
+    :items="selectedItems"
     :contact="contact"
     :order-no="printOrderNo"
     :shipping-text="shippingText"

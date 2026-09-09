@@ -25,6 +25,28 @@ const newsletter = ref(false)
 const symbolCheckbox = ref(true)
 const mergeKeyword = ref('王小明')
 
+// 全選 / 半勾示範
+const TOPPINGS = ['珍珠', '椰果', '仙草']
+const checkedToppings = ref<string[]>(['珍珠'])
+
+const isAllChecked = computed(
+  () => checkedToppings.value.length === TOPPINGS.length,
+)
+
+const isPartlyChecked = computed(
+  () => checkedToppings.value.length > 0 && !isAllChecked.value,
+)
+
+const toggleTopping = (topping: string) => {
+  checkedToppings.value = checkedToppings.value.includes(topping)
+    ? checkedToppings.value.filter((item) => item !== topping)
+    : [...checkedToppings.value, topping]
+}
+
+const toggleAllToppings = () => {
+  checkedToppings.value = isAllChecked.value ? [] : [...TOPPINGS]
+}
+
 const locationOptions = [
   { label: '台北門市', value: 'taipei' },
   { label: '台中門市', value: 'taichung' },
@@ -399,8 +421,8 @@ const contactOptions = [
     <ShowcaseSection
       title="多選選項"
       component-name="UIFormCheckbox"
-      description="可獨立組合多個核取項目；bordered 可建立與輸入框一致的整塊點擊區域。不需要文字時省略 label／slot，並提供 aria-label。"
-      usage='<UIFormCheckbox v-model="agreed" label="我同意服務條款" />\n<UIFormCheckbox v-model="enabled" aria-label="啟用通知" />\n<UIFormCheckbox bordered label="接收通知" />'
+      description="可獨立組合多個核取項目；bordered 可建立與輸入框一致的整塊點擊區域。不需要文字時省略 label／slot，並提供 aria-label。indeterminate 用於「全選」這類代表一群子項目的核取框，子項目只勾了一部分時顯示為半勾。未選取時一律是空白方框，不要另外加淡色的提示勾——會被看成已經勾選。"
+      usage='<UIFormCheckbox v-model="agreed" label="我同意服務條款" />\n<UIFormCheckbox v-model="enabled" aria-label="啟用通知" />\n<UIFormCheckbox bordered label="接收通知" />\n<UIFormCheckbox\n  :model-value="isAllChecked"\n  :indeterminate="isPartlyChecked"\n  label="全選"\n  @update:model-value="toggleAllToppings"\n/>'
     >
       <div class="check-list">
         <UIFormCheckbox v-model="agreed" label="我同意服務條款" />
@@ -413,6 +435,26 @@ const contactOptions = [
           <UIFormCheckbox v-model="symbolCheckbox" aria-label="啟用通知" />
         </div>
         <UIFormCheckbox v-model="newsletter" label="外框 Checkbox" bordered />
+
+        <!-- 全選要用 :model-value + @update:model-value：
+             isAllChecked 是 computed，v-model 會試著寫進去而報錯 -->
+        <div class="select-all-example">
+          <UIFormCheckbox
+            :model-value="isAllChecked"
+            :indeterminate="isPartlyChecked"
+            label="全選"
+            @update:model-value="toggleAllToppings"
+          />
+          <div class="select-all-example__children">
+            <UIFormCheckbox
+              v-for="topping in TOPPINGS"
+              :key="topping"
+              :model-value="checkedToppings.includes(topping)"
+              :label="topping"
+              @update:model-value="toggleTopping(topping)"
+            />
+          </div>
+        </div>
       </div>
     </ShowcaseSection>
 

@@ -207,6 +207,20 @@
     gap: 14px 20px;
   }
 
+  /* 全選示範：子項目縮排，看得出「全選」管的是下面那幾個 */
+  .select-all-example {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .select-all-example__children {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding-left: 28px;
+  }
+
   .symbol-example,
   .inline-field {
     display: flex;
